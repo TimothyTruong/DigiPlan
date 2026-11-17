@@ -1,0 +1,37 @@
+# Petal (placeholder name) — student life planner for the web
+
+## Standing rules (from owner's setup prompt; apply to all agents/subagents)
+- Be blunt and concise. Push back on flawed reasoning. No flattery.
+- Prefer editing existing code over new files. Run tests before claiming done; report real output.
+- Never read/write/echo credentials, `.env*` (except `.env.example`), or anything under `~/finance/`. Owner runs auth steps.
+- Ask before installing tools or editing global settings. Show diffs for edits to existing config.
+- Delegate bulk reading/review to cheaper subagents (`.claude/agents/`); main session plans and builds.
+- One task per worktree, one Claude session per worktree.
+- MCPs: add one only when a feature can't be built with a plain API call. The app itself uses none at runtime.
+
+## Commands
+- Install: `npm install` · Dev: `npm run dev` (http://localhost:5173)
+- Tests (fast, node): `npm test` · Typecheck: `npm run typecheck` · Build: `npm run build`
+- Screenshots for UI review: `npm run build && npx vite preview --port 4173 & node scripts/screenshots.mjs screenshots`
+
+## Architecture
+- Vite + React 19 + TypeScript, `wouter` routing, `zustand` state, `date-fns`. No UI kit; one CSS file.
+- `src/store/store.ts`: single zustand store persisted to IndexedDB (`idb-keyval`, debounced 250ms writes).
+  Ships demo data relative to today; Settings → "Clear all" removes it. `main.tsx` waits for hydration.
+- `src/lib/blobs.ts`: images/files live in a separate IndexedDB store as Blobs (images downscaled to WebP on upload).
+  State only holds ids. Backup JSON does NOT include blobs yet.
+- `src/lib/dates.ts`: recurrence (`occursOn`/`expand`) — dates are local `yyyy-MM-dd` strings, never Date objects in state.
+- `src/lib/agenda.ts` `useAgenda(from,to)`: merges items + workouts + Google events into sorted `Entry[]`. Use it for any dated view.
+- `src/lib/google.ts`: Google Identity Services token flow (browser-only). Reads events (filtered to enabled calendars),
+  pushes items (create/update/delete) tagged with `extendedProperties.private.petalId` so they aren't shown twice.
+- `src/lib/ics.ts`: .ics timetable import → items (lectures→class, "exam/midterm"→exam with countdown).
+- Theming: each page/class has one accent hex; all tints derive via `color-mix` in CSS (`--accent-soft`, `--accent-ink`).
+  Presets in `src/theme/themes.ts`. Covers: `preset:<key>` | blob id | `none`. Icons: emoji | `img:<blobId>`.
+- Pages are lazy-loaded except Today. Keep the main chunk lean (currently ~76 KB gzip).
+
+## Gotchas
+- Google tokens last ~1h, no silent refresh without a backend; user must press Reconnect. Proper fix = small backend w/ refresh tokens.
+- Google OAuth needs `VITE_GOOGLE_CLIENT_ID` (or entered in Settings) and the deploy origin in Authorized JS origins.
+- Data is per-browser (no sync/accounts yet). Clearing site data wipes it — export backups.
+- `.ics` TZID times are treated as local wall time; UTC (`Z`) times are converted.
+- App name lives only in `src/config.ts`, `index.html` <title>, and the IndexedDB names (`petal-*`) — renaming the DB names loses existing data.

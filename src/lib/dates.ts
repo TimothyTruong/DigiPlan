@@ -1,0 +1,102 @@
+import {
+  addDays, differenceInCalendarDays, differenceInCalendarWeeks, format, parseISO, startOfWeek,
+} from 'date-fns'
+import type { ISODate, Item, Recurrence } from '../store/types'
+
+export const toISO = (d: Date): ISODate => format(d, 'yyyy-MM-dd')
+export const fromISO = (s: ISODate): Date => parseISO(s)
+export const todayISO = (): ISODate => toISO(new Date())
+export const addDaysISO = (s: ISODate, n: number): ISODate => toISO(addDays(fromISO(s), n))
+export const daysUntil = (s: ISODate, from: ISODate = todayISO()): number =>
+  differenceInCalendarDays(fromISO(s), fromISO(from))
+
+/** True if a recurring rule (anchored at `start`) produces an occurrence on `day`. */
+export function occursOn(start: ISODate, rule: Recurrence, day: ISODate): boolean {
+  if (day < start) return false
+  if (rule.until && day > rule.until) return false
+  if (rule.exceptions?.includes(day)) return false
+  const d = fromISO(day)
+  const s = fromISO(start)
+  switch (rule.freq) {
+    case 'daily': return true
+    case 'weekdays': { const w = d.getDay(); return w !== 0 && w !== 6 }
+    case 'weekly':
+    case 'biweekly': {
+      const days = rule.byDay?.length ? rule.byDay : [s.getDay()]
+      if (!days.includes(d.getDay())) return false
+      if (rule.freq === 'weekly') return true
+      return differenceInCalendarWeeks(d, s, { weekStartsOn: 0 }) % 2 === 0
+    }
+    case 'monthly': return d.getDate() === s.getDate()
+    case 'yearly': return d.getDate() === s.getDate() && d.getMonth() === s.getMonth()
+  }
+}
+
+export interface Occurrence<T = Item> { item: T; date: ISODate }
+
+/** Expand items into dated occurrences within [from, to] inclusive. Cost: O(items × days) only for recurring items. */
+export function expand(items: Item[], from: ISODate, to: ISODate): Occurrence[] {
+  const out: Occurrence[] = []
+  for (const item of items) {
+    if (!item.recurrence) {
+      if (item.date >= from && item.date <= to) out.push({ item, date: item.date })
+      continue
+    }
+    let day = item.date > from ? item.date : from
+    const end = item.recurrence.until && item.recurrence.until < to ? item.recurrence.until : to
+    while (day <= end) {
+      if (occursOn(item.date, item.recurrence, day)) out.push({ item, date: day })
+      day = addDaysISO(day, 1)
+    }
+  }
+  return out.sort(compareOcc)
+}
+
+export function compareOcc(a: Occurrence, b: Occurrence): number {
+  if (a.date !== b.date) return a.date < b.date ? -1 : 1
+  const at = a.item.start ?? '', bt = b.item.start ?? ''
+  if (at !== bt) return at === '' ? -1 : bt === '' ? 1 : at < bt ? -1 : 1
+  return a.item.title.localeCompare(b.item.title)
+}
+
+export const isDone = (item: Item, date: ISODate) =>
+  item.recurrence ? !!item.doneDates?.includes(date) : !!item.done
+
+/** Next occurrence on/after `from`, searching up to `horizon` days. */
+export function nextOccurrence(item: Item, from: ISODate = todayISO(), horizon = 400): ISODate | undefined {
+  if (!item.recurrence) return item.date >= from ? item.date : undefined
+  const occ = expand([item], from, addDaysISO(from, horizon))
+  return occ[0]?.date
+}
+
+export function weekDays(anchor: ISODate, weekStartsOn: 0 | 1): ISODate[] {
+  const s = startOfWeek(fromISO(anchor), { weekStartsOn })
+  return Array.from({ length: 7 }, (_, i) => toISO(addDays(s, i)))
+}
+
+export function monthGrid(anchor: ISODate, weekStartsOn: 0 | 1): ISODate[] {
+  const a = fromISO(anchor)
+  const first = new Date(a.getFullYear(), a.getMonth(), 1)
+  const s = startOfWeek(first, { weekStartsOn })
+  return Array.from({ length: 42 }, (_, i) => toISO(addDays(s, i)))
+}
+
+export function fmtTime(t?: string): string {
+  if (!t) return ''
+  const [h, m] = t.split(':').map(Number)
+  const ap = h >= 12 ? 'pm' : 'am'
+  const hh = h % 12 || 12
+  return m ? `${hh}:${String(m).padStart(2, '0')}${ap}` : `${hh}${ap}`
+}
+
+export function countdownLabel(n: number): string {
+  if (n === 0) return 'Today'
+  if (n === 1) return 'Tomorrow'
+  if (n < 0) return `${-n}d ago`
+  return `${n} days`
+}
+
+export function greeting(d = new Date()): string {
+  const h = d.getHours()
+  return h < 5 ? 'Up late' : h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening'
+}
