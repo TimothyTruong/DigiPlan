@@ -60,6 +60,7 @@ describe('ics', () => {
     let n = 0
     const items = icsToItems(parseIcs(ics), () => String(n++))
     expect(items.map((i) => i.kind)).toEqual(['class', 'exam', 'event'])
+    expect(items[0].sourceUid).toBe('1')
   })
 })
 

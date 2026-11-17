@@ -20,8 +20,11 @@ export default function Settings() {
   async function importIcs(f?: File) {
     if (!f) return
     try {
-      const items = icsToItems(parseIcs(await f.text()), uid)
-      if (!items.length) { toast('No events found in that file'); return }
+      const seen = new Set(useStore.getState().items.map((i) => i.sourceUid).filter(Boolean))
+      const parsed = icsToItems(parseIcs(await f.text()), uid)
+      const items = parsed.filter((i) => !i.sourceUid || !seen.has(i.sourceUid))
+      if (!parsed.length) { toast('No events found in that file'); return }
+      if (!items.length) { toast('Everything in that file is already imported'); return }
       addItems(items)
       toast(`Imported ${items.length} events (${items.filter((i) => i.kind === 'class').length} classes, ${items.filter((i) => i.kind === 'exam').length} exams)`)
     } catch { toast('Couldn’t read that .ics file') }
@@ -150,7 +153,10 @@ function GoogleSection() {
           <div className="nav-label" style={{ padding: '8px 0 2px' }}>Calendars</div>
           {settings.googleCalendars.map((c) => (
             <label key={c.id} className="row small"><input type="checkbox" className="check" checked={c.enabled}
-              onChange={(e) => setSettings({ googleCalendars: settings.googleCalendars.map((x) => (x.id === c.id ? { ...x, enabled: e.target.checked } : x)) })} />
+              onChange={(e) => {
+                setSettings({ googleCalendars: settings.googleCalendars.map((x) => (x.id === c.id ? { ...x, enabled: e.target.checked } : x)) })
+                useGoogle.setState({ events: {}, fetchedAt: {} }) // calendar set changed: drop cached ranges
+              }} />
               <span className="dot" style={{ background: c.color }} />{c.summary}</label>
           ))}
           {!token && <div className="tiny muted">Google sessions last about an hour in this browser-only version — press Reconnect to refresh.</div>}

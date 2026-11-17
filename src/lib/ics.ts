@@ -108,6 +108,7 @@ export function icsToItems(events: IcsEvent[], mkId: () => string): Item[] {
     location: e.location,
     notes: e.description,
     recurrence: e.recurrence,
+    sourceUid: e.uid,
     createdAt: Date.now(),
   }))
 }

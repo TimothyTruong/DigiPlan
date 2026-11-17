@@ -32,6 +32,7 @@ export interface Item {
   weight?: number // % of course grade
   score?: number // % achieved
   gcal?: { calendarId: string; eventId: string } // pushed copy in Google Calendar
+  sourceUid?: string // .ics UID, for de-duplicating re-imports
   createdAt: number
 }
 
