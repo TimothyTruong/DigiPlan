@@ -82,3 +82,28 @@ describe('markdown', () => {
     expect(toggleTaskLine('x\n- [ ] a', 1)).toBe('x\n- [x] a')
   })
 })
+
+import { parseQuickDate } from '../dates'
+describe('parseQuickDate', () => {
+  const T = '2026-11-17' // Tuesday
+  it('weekday → next occurrence, never today', () => {
+    expect(parseQuickDate('midterm chem friday', T)).toEqual({ title: 'midterm chem', date: '2026-11-20' })
+    expect(parseQuickDate('gym tue', T).date).toBe('2026-11-24')
+    expect(parseQuickDate('essay due next fri', T)).toEqual({ title: 'essay', date: '2026-11-27' })
+  })
+  it('relative words', () => {
+    expect(parseQuickDate('print readings tmrw', T)).toEqual({ title: 'print readings', date: '2026-11-18' })
+    expect(parseQuickDate('call mom tonight', T).date).toBe(T)
+    expect(parseQuickDate('lab in 10 days', T)).toEqual({ title: 'lab', date: '2026-11-27' })
+  })
+  it('month day, rolling to next year', () => {
+    expect(parseQuickDate('final dec 9', T).date).toBe('2026-12-09')
+    expect(parseQuickDate('paper due 3 feb', T)).toEqual({ title: 'paper', date: '2027-02-03' })
+    expect(parseQuickDate('x feb 30', T)).toEqual({ title: 'x feb 30' })
+  })
+  it('no date and no false positives', () => {
+    expect(parseQuickDate('monday.com signup review', T).title).toBeTruthy()
+    expect(parseQuickDate('read chapter 4', T)).toEqual({ title: 'read chapter 4' })
+    expect(parseQuickDate('mayonnaise', T)).toEqual({ title: 'mayonnaise' })
+  })
+})

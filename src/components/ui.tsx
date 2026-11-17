@@ -1,4 +1,4 @@
-import { useEffect, useRef, type ReactNode } from 'react'
+import { useEffect, useId, useRef, useState, type ReactNode } from 'react'
 import { create } from 'zustand'
 import { useBlobUrl } from '../lib/blobs'
 import { BANNERS } from '../theme/themes'
@@ -7,10 +7,20 @@ export function Modal({ open, onClose, title, children, wide, footer }: {
   open: boolean; onClose: () => void; title?: ReactNode; children: ReactNode; wide?: boolean; footer?: ReactNode
 }) {
   const ref = useRef<HTMLDivElement>(null)
+  const labelId = useId()
   useEffect(() => {
     if (!open) return
     const prev = document.activeElement as HTMLElement | null
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') { e.stopPropagation(); onClose() } }
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') { e.stopPropagation(); onClose(); return }
+      if (e.key !== 'Tab' || !ref.current) return
+      // Focus trap: wrap Tab inside the dialog.
+      const f = [...ref.current.querySelectorAll<HTMLElement>('button:not([disabled]), [href], input:not([disabled]), select, textarea, summary, [tabindex]:not([tabindex="-1"])')].filter((el) => el.offsetParent !== null)
+      if (!f.length) return
+      const first = f[0], last = f[f.length - 1]
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus() }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus() }
+    }
     window.addEventListener('keydown', onKey)
     // Respect React autoFocus; otherwise focus the first field, never the close button.
     const t = setTimeout(() => {
@@ -23,10 +33,10 @@ export function Modal({ open, onClose, title, children, wide, footer }: {
   if (!open) return null
   return (
     <div className="overlay" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
-      <div className={`modal${wide ? ' wide' : ''}`} role="dialog" aria-modal="true" ref={ref}>
+      <div className={`modal${wide ? ' wide' : ''}`} role="dialog" aria-modal="true" aria-labelledby={title !== undefined ? labelId : undefined} ref={ref}>
         {title !== undefined && (
           <div className="modal-head">
-            <h2>{title}</h2>
+            <h2 id={labelId}>{title}</h2>
             <button className="btn ghost icon" onClick={onClose} aria-label="Close">✕</button>
           </div>
         )}
@@ -88,4 +98,15 @@ export function Seg<T extends string>({ value, options, onChange, label }: { val
       ))}
     </div>
   )
+}
+
+export function useMediaQuery(q: string): boolean {
+  const [m, setM] = useState(() => typeof window !== 'undefined' && window.matchMedia(q).matches)
+  useEffect(() => {
+    const mq = window.matchMedia(q)
+    const on = () => setM(mq.matches)
+    mq.addEventListener('change', on)
+    return () => mq.removeEventListener('change', on)
+  }, [q])
+  return m
 }

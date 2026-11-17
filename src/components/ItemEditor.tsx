@@ -39,6 +39,7 @@ export function ItemEditor() {
   if (!open || !it) return null
 
   const set = (p: Partial<Item>) => setIt({ ...it, ...p })
+  const addStep = () => { if (!newStep.trim()) return; set({ steps: [...(it.steps ?? []), { id: uid(), text: newStep.trim(), done: false }] }); setNewStep('') }
   const timed = it.start !== undefined
   const showGrade = it.kind === 'assignment' || it.kind === 'exam'
   const showSteps = it.kind === 'assignment' || it.kind === 'task'
@@ -46,7 +47,9 @@ export function ItemEditor() {
   async function save() {
     if (!it) return
     if (!it.title.trim()) { toast('Give it a title'); return }
-    const next: Item = { ...it, title: it.title.trim() }
+    // A step typed but not confirmed with Enter still counts.
+    const pending = newStep.trim() ? [{ id: uid(), text: newStep.trim(), done: false }] : []
+    const next: Item = { ...it, title: it.title.trim(), ...(pending.length && { steps: [...(it.steps ?? []), ...pending] }) }
     if (next.end && next.start && next.end <= next.start) next.end = undefined
     upsertItem(next)
     close()
@@ -82,7 +85,7 @@ export function ItemEditor() {
         </div>
         <div className="row">
           <button className="btn" onClick={close}>Cancel</button>
-          <button className="btn primary" onClick={save}>Save <kbd>⌘↵</kbd></button>
+          <button className="btn primary" onClick={save}>Save <kbd className="kbd-hint">⌘↵</kbd></button>
         </div>
       </>}>
       <div className="stack" style={{ gap: 14 }} onKeyDown={(e) => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) save() }}>
@@ -130,15 +133,6 @@ export function ItemEditor() {
           <label className="row small" style={{ marginLeft: 'auto' }}><input type="checkbox" className="check" checked={!!it.countdown} onChange={(e) => set({ countdown: e.target.checked })} /> Show countdown</label>
         </div>
 
-        <label className="field"><span>Location</span><input className="input" placeholder="Room, building or link" value={it.location ?? ''} onChange={(e) => set({ location: e.target.value || undefined })} /></label>
-
-        {showGrade && (
-          <div className="grid cols-2">
-            <label className="field"><span>Weight (% of grade)</span><input type="number" min={0} max={100} className="input" value={it.weight ?? ''} onChange={(e) => set({ weight: e.target.value === '' ? undefined : Number(e.target.value) })} /></label>
-            <label className="field"><span>Score (%)</span><input type="number" min={0} max={150} className="input" placeholder="Once marked" value={it.score ?? ''} onChange={(e) => set({ score: e.target.value === '' ? undefined : Number(e.target.value) })} /></label>
-          </div>
-        )}
-
         {showSteps && (
           <div className="field"><span>Steps</span>
             <div className="stack" style={{ gap: 4 }}>
@@ -149,13 +143,30 @@ export function ItemEditor() {
                   <button className="btn ghost icon sm" aria-label="Remove step" onClick={() => set({ steps: it.steps!.filter((x) => x.id !== s.id) })}>✕</button>
                 </div>
               ))}
-              <input className="input" placeholder="Add a step and press Enter — break it into things you can start" value={newStep} onChange={(e) => setNewStep(e.target.value)}
-                onKeyDown={(e) => { if (e.key === 'Enter' && newStep.trim()) { e.preventDefault(); set({ steps: [...(it.steps ?? []), { id: uid(), text: newStep.trim(), done: false }] }); setNewStep('') } }} />
+              <div className="row">
+                <input className="input" placeholder="Add a step" value={newStep} onChange={(e) => setNewStep(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter' && !e.metaKey && !e.ctrlKey && newStep.trim()) { e.preventDefault(); addStep() } }} />
+                <button className="btn" onClick={addStep} disabled={!newStep.trim()}>+ Add</button>
+              </div>
             </div>
           </div>
         )}
 
+        <details open={!!(it.location || it.notes || it.weight !== undefined || it.score !== undefined)}>
+          <summary className="small muted" style={{ cursor: 'pointer', fontWeight: 600 }}>More details{showGrade ? ' — location, grade weight, notes' : ' — location, notes'}</summary>
+          <div className="stack" style={{ gap: 14, marginTop: 12 }}>
+        <label className="field"><span>Location</span><input className="input" placeholder="Room, building or link" value={it.location ?? ''} onChange={(e) => set({ location: e.target.value || undefined })} /></label>
+
+        {showGrade && (
+          <div className="grid cols-2">
+            <label className="field"><span>Weight (% of grade)</span><input type="number" min={0} max={100} className="input" value={it.weight ?? ''} onChange={(e) => set({ weight: e.target.value === '' ? undefined : Number(e.target.value) })} /></label>
+            <label className="field"><span>Score (%)</span><input type="number" min={0} max={150} className="input" placeholder="Once marked" value={it.score ?? ''} onChange={(e) => set({ score: e.target.value === '' ? undefined : Number(e.target.value) })} /></label>
+          </div>
+        )}
+
         <label className="field"><span>Notes</span><textarea className="textarea" rows={3} value={it.notes ?? ''} onChange={(e) => set({ notes: e.target.value || undefined })} /></label>
+          </div>
+        </details>
 
         {gToken && (
           <label className="row small"><input type="checkbox" className="check" checked={push} onChange={(e) => setPush(e.target.checked)} /> Also put this on my Google Calendar</label>

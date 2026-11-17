@@ -100,3 +100,42 @@ export function greeting(d = new Date()): string {
   const h = d.getHours()
   return h < 5 ? 'Up late' : h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening'
 }
+
+const WD = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat']
+/**
+ * Pull a date phrase out of quick-add text: today/tonight, tomorrow/tmrw, weekday names (next occurrence,
+ * "next fri" = +7), "in N days", "may 3"/"3 may". Returns cleaned title and ISO date (undefined if none found).
+ */
+export function parseQuickDate(text: string, today: ISODate = todayISO()): { title: string; date?: ISODate } {
+  const months = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec']
+  const rules: [RegExp, (m: RegExpMatchArray) => ISODate | undefined][] = [
+    [/\b(?:due\s+)?(today|tonight)\b/i, () => today],
+    [/\b(?:due\s+)?(tomorrow|tmrw|tmr)\b/i, () => addDaysISO(today, 1)],
+    [/\b(?:due\s+)?in\s+(\d{1,3})\s+days?\b/i, (m) => addDaysISO(today, Number(m[1]))],
+    [/\b(?:due\s+)?(next\s+)?(sun|mon|tue|wed|thu|fri|sat)[a-z]*\b/i, (m) => {
+      const target = WD.indexOf(m[2].toLowerCase())
+      let diff = (target - fromISO(today).getDay() + 7) % 7
+      if (diff === 0) diff = 7
+      return addDaysISO(today, diff + (m[1] ? 7 : 0))
+    }],
+    [/\b(?:due\s+)?(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?\s+(\d{1,2})(?:st|nd|rd|th)?\b/i, (m) => monthDay(months.indexOf(m[1].toLowerCase()), Number(m[2]))],
+    [/\b(?:due\s+)?(\d{1,2})(?:st|nd|rd|th)?\s+(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\b/i, (m) => monthDay(months.indexOf(m[2].toLowerCase()), Number(m[1]))],
+  ]
+  function monthDay(mo: number, d: number): ISODate | undefined {
+    if (d < 1 || d > 31) return undefined
+    const t = fromISO(today)
+    let cand = new Date(t.getFullYear(), mo, d)
+    if (cand.getMonth() !== mo) return undefined
+    if (toISO(cand) < today) cand = new Date(t.getFullYear() + 1, mo, d)
+    return toISO(cand)
+  }
+  for (const [re, fn] of rules) {
+    const m = text.match(re)
+    if (!m) continue
+    const date = fn(m)
+    if (!date) continue
+    const title = (text.slice(0, m.index) + text.slice(m.index! + m[0].length)).replace(/\s{2,}/g, ' ').trim()
+    return { title: title || text.trim(), date }
+  }
+  return { title: text.trim() }
+}

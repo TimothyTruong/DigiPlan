@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, type CSSProperties } from 'react'
+import { lazy, Suspense, useEffect, useState, type CSSProperties } from 'react'
 import { Link, Route, Switch, useLocation } from 'wouter'
 import { APP_NAME } from './config'
 import { ItemEditor, openEditor } from './components/ItemEditor'
@@ -68,7 +68,6 @@ export function App() {
   const [loc] = useLocation()
   useEffect(() => { window.scrollTo(0, 0) }, [loc])
   useEffect(() => { const id = setTimeout(prefetch, 1500); return () => clearTimeout(id) }, [])
-  const mobile = SECTIONS.filter((s) => s.id !== 'settings')
 
   return (
     <div className="app">
@@ -98,14 +97,40 @@ export function App() {
           </Switch>
         </Suspense>
       </main>
-      <nav className="mobile-bar" aria-label="Main mobile">
-        {mobile.map((s) => <MobileLink key={s.id} id={s.id} />)}
-        <MobileLink id="settings" />
-      </nav>
+      <MobileBar />
       <button className="fab" onClick={() => openEditor({})} aria-label="Add new" title="Add (N)">+</button>
       <ItemEditor />
       <Toaster />
     </div>
+  )
+}
+
+const CORE = ['today', 'calendar', 'tasks', 'classes'] as const
+const EXTRA = ['meals', 'fitness', 'habits', 'budget', 'settings'] as const
+
+/** Phones: 4 core pages + a "More" sheet, instead of a sideways-scrolling bar. */
+function MobileBar() {
+  const [loc] = useLocation()
+  const [open, setOpen] = useState(false)
+  const pages = useStore((st) => st.pages)
+  useEffect(() => setOpen(false), [loc])
+  const extraActive = EXTRA.some((id) => loc.startsWith(SECTIONS.find((s) => s.id === id)!.path))
+  return (
+    <>
+      {open && <div style={{ position: 'fixed', inset: 0, zIndex: 44 }} onClick={() => setOpen(false)} />}
+      {open && (
+        <div className="more-sheet" role="menu">
+          {EXTRA.map((id) => {
+            const s = SECTIONS.find((x) => x.id === id)!
+            return <Link key={id} href={s.path} role="menuitem" className={loc.startsWith(s.path) ? 'active' : ''}><span style={{ fontSize: 18 }}><IconView icon={pages[id].icon} /></span>{s.label}</Link>
+          })}
+        </div>
+      )}
+      <nav className="mobile-bar" aria-label="Main mobile">
+        {CORE.map((id) => <MobileLink key={id} id={id} />)}
+        <button className={`more-btn${extraActive || open ? ' active' : ''}`} aria-expanded={open} onClick={() => setOpen(!open)}><span>☰</span>More</button>
+      </nav>
+    </>
   )
 }
 

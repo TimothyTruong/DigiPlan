@@ -50,8 +50,9 @@ export default function Today() {
           <section className="card">
             <div className="card-head"><h3>✅ To do</h3><button className="btn sm ghost" onClick={() => openEditor({ kind: 'task', date: t })}>+ Task</button></div>
             {overdue.length > 0 && <>
+              <div className="nav-label" style={{ paddingLeft: 10, color: 'var(--danger)' }}>Overdue · carried over</div>
               {overdue.map((e) => <EntryRow key={e.key} e={e} showDate={format(fromISO(e.date), 'MMM d')} />)}
-              <div className="tiny muted" style={{ padding: '2px 10px 8px' }}>↑ Carried over — still open from earlier</div>
+              {dueToday.length > 0 && <div className="nav-label" style={{ paddingLeft: 10 }}>Today</div>}
             </>}
             {dueToday.map((e) => <EntryRow key={e.key} e={e} />)}
             {!overdue.length && !dueToday.length && <Empty emoji="🌷">All clear for today.</Empty>}

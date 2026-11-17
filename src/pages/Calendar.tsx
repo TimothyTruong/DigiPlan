@@ -4,7 +4,7 @@ import { addMonths, addWeeks, format } from 'date-fns'
 import { EntryRow, openEntry } from '../components/EntryRow'
 import { openEditor } from '../components/ItemEditor'
 import { PageShell } from '../components/PageShell'
-import { Empty, Seg } from '../components/ui'
+import { Empty, Seg, useMediaQuery } from '../components/ui'
 import { groupByDate, useAgenda, type Entry, type EntryKind } from '../lib/agenda'
 import { addDaysISO, countdownLabel, daysUntil, fmtTime, fromISO, monthGrid, toISO, todayISO, weekDays } from '../lib/dates'
 import { useGoogle } from '../lib/google'
@@ -27,19 +27,23 @@ export default function Calendar() {
   const [courseFilter, setCourseFilter] = useState('')
   const courses = useStore((s) => s.courses)
   const gStatus = useGoogle((s) => s.status)
+  const narrow = useMediaQuery('(max-width: 760px)')
+  const [selected, setSelected] = useState(search.get('d') ?? t)
+  const [listDays, setListDays] = useState(14)
+  const [hideClasses, setHideClasses] = useState(false)
 
   const range = useMemo(() => {
     if (view === 'month') { const g = monthGrid(anchor, ws); return [g[0], g[41]] as const }
     if (view === 'week') { const w = weekDays(anchor, ws); return [w[0], w[6]] as const }
-    return [anchor, addDaysISO(anchor, 60)] as const
-  }, [view, anchor, ws])
+    return [anchor, addDaysISO(anchor, listDays - 1)] as const
+  }, [view, anchor, ws, listDays])
   const all = useAgenda(range[0], range[1])
   const entries = useMemo(() => all.filter((e) =>
-    (filter === 'all' || e.kind === filter || (filter === 'assignment' && e.kind === 'task')) &&
-    (!courseFilter || e.course?.id === courseFilter)), [all, filter, courseFilter])
+    (filter === 'all' ? !(hideClasses && e.kind === 'class') : e.kind === filter || (filter === 'assignment' && e.kind === 'task')) &&
+    (!courseFilter || e.course?.id === courseFilter)), [all, filter, courseFilter, hideClasses])
   const byDate = useMemo(() => groupByDate(entries), [entries])
 
-  const step = (dir: number) => setAnchor(toISO(view === 'month' ? addMonths(fromISO(anchor), dir) : view === 'week' ? addWeeks(fromISO(anchor), dir) : fromISO(addDaysISO(anchor, dir * 30))))
+  const step = (dir: number) => setAnchor(toISO(view === 'month' ? addMonths(fromISO(anchor), dir) : view === 'week' ? addWeeks(fromISO(anchor), dir) : fromISO(addDaysISO(anchor, dir * 14))))
   const title = view === 'month' ? format(fromISO(anchor), 'MMMM yyyy')
     : view === 'week' ? `${format(fromISO(range[0]), 'MMM d')} – ${format(fromISO(range[1]), 'MMM d')}`
     : `From ${format(fromISO(anchor), 'MMM d')}`
@@ -60,6 +64,7 @@ export default function Calendar() {
       </div>
       <div className="row wrap" style={{ marginBottom: 14 }}>
         {FILTERS.map((f) => <button key={f.value} className={`chip${filter === f.value ? '' : ' outline'}`} aria-pressed={filter === f.value} onClick={() => setFilter(f.value)}>{f.label}</button>)}
+        {filter === 'all' && <button className={`chip${hideClasses ? '' : ' outline'}`} aria-pressed={hideClasses} onClick={() => setHideClasses(!hideClasses)}>Hide classes</button>}
         {courses.length > 0 && (
           <select className="select" style={{ width: 'auto', height: 26, fontSize: 12, borderRadius: 99, marginLeft: 'auto' }} value={courseFilter} onChange={(e) => setCourseFilter(e.target.value)} aria-label="Filter by class">
             <option value="">All classes</option>
@@ -68,14 +73,23 @@ export default function Calendar() {
         )}
       </div>
 
-      {view === 'month' && <MonthView anchor={anchor} ws={ws} byDate={byDate} />}
+      {view === 'month' && <MonthView anchor={anchor} ws={ws} byDate={byDate} selected={narrow ? selected : undefined}
+        onDay={(d) => (narrow ? setSelected(d) : openEditor({ date: d, kind: 'event' }))} />}
+      {view === 'month' && narrow && (
+        <section className="card" style={{ marginTop: 12 }}>
+          <div className="card-head"><h3>{format(fromISO(selected), 'EEEE, MMM d')}</h3><button className="btn sm primary" onClick={() => openEditor({ date: selected, kind: 'event' })}>+ Add</button></div>
+          {(byDate.get(selected) ?? []).map((e) => <EntryRow key={e.key} e={e} />)}
+          {!byDate.get(selected)?.length && <Empty emoji="☁️">Nothing on this day.</Empty>}
+        </section>
+      )}
       {view === 'week' && <WeekView days={weekDays(anchor, ws)} byDate={byDate} />}
       {view === 'list' && <ListView byDate={byDate} />}
+      {view === 'list' && <div className="row" style={{ justifyContent: 'center', marginTop: 12 }}><button className="btn" onClick={() => setListDays(listDays + 14)}>Show 2 more weeks</button></div>}
     </PageShell>
   )
 }
 
-function MonthView({ anchor, ws, byDate }: { anchor: string; ws: 0 | 1; byDate: Map<string, Entry[]> }) {
+function MonthView({ anchor, ws, byDate, selected, onDay }: { anchor: string; ws: 0 | 1; byDate: Map<string, Entry[]>; selected?: string; onDay: (d: string) => void }) {
   const t = todayISO()
   const grid = monthGrid(anchor, ws)
   const month = anchor.slice(0, 7)
@@ -87,8 +101,8 @@ function MonthView({ anchor, ws, byDate }: { anchor: string; ws: 0 | 1; byDate: 
         const list = byDate.get(d) ?? []
         return (
           <div key={d} role="gridcell" tabIndex={0} aria-label={format(fromISO(d), 'EEEE MMMM d')}
-            className={`day${d.slice(0, 7) !== month ? ' out' : ''}${d === t ? ' today' : ''}`}
-            onClick={() => openEditor({ date: d, kind: 'event' })} onKeyDown={(e) => e.key === 'Enter' && e.currentTarget === e.target && openEditor({ date: d, kind: 'event' })}>
+            className={`day${d.slice(0, 7) !== month ? ' out' : ''}${d === t ? ' today' : ''}${d === selected ? ' sel' : ''}`}
+            onClick={() => onDay(d)} onKeyDown={(e) => e.key === 'Enter' && e.currentTarget === e.target && onDay(d)}>
             <span className="dnum">{fromISO(d).getDate()}</span>
             {list.slice(0, 3).map((e) => <Chip key={e.key} e={e} />)}
             {list.length > 3 && <span className="more">+{list.length - 3} more</span>}
@@ -132,7 +146,7 @@ function WeekView({ days, byDate }: { days: string[]; byDate: Map<string, Entry[
 
 function ListView({ byDate }: { byDate: Map<string, Entry[]> }) {
   const t = todayISO()
-  if (!byDate.size) return <div className="card"><Empty emoji="🗓️">Nothing in the next 60 days with these filters.</Empty></div>
+  if (!byDate.size) return <div className="card"><Empty emoji="🗓️">Nothing in this range with these filters.</Empty></div>
   return (
     <div className="card">
       {[...byDate.entries()].map(([d, list]) => {

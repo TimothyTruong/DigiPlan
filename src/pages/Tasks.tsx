@@ -4,7 +4,7 @@ import { format } from 'date-fns'
 import { openEditor } from '../components/ItemEditor'
 import { PageShell } from '../components/PageShell'
 import { Empty, Progress, toast } from '../components/ui'
-import { countdownLabel, daysUntil, fromISO, isDone, nextOccurrence, todayISO } from '../lib/dates'
+import { countdownLabel, daysUntil, fromISO, isDone, nextOccurrence, parseQuickDate, todayISO } from '../lib/dates'
 import { uid } from '../lib/id'
 import { useStore } from '../store/store'
 import type { Item, ItemKind } from '../store/types'
@@ -44,12 +44,12 @@ export default function Tasks() {
   }, [rows, f, t])
 
   function addQuick() {
-    const title = quick.trim()
-    if (!title) return
+    if (!quick.trim()) return
+    const { title, date } = parseQuickDate(quick, t)
     const kind: ItemKind = /\b(exam|midterm|final|quiz)\b/i.test(title) ? 'exam' : /\b(essay|assignment|lab|report|due)\b/i.test(title) ? 'assignment' : 'task'
-    upsertItem({ id: uid(), kind, title, date: t, createdAt: Date.now(), countdown: kind === 'exam' || undefined })
+    upsertItem({ id: uid(), kind, title, date: date ?? t, createdAt: Date.now(), countdown: kind === 'exam' || undefined })
     setQuick('')
-    toast(`${KIND_META[kind].label} added for today — click it to set a date`)
+    toast(`${KIND_META[kind].label} added · ${date ? format(fromISO(date), 'EEE, MMM d') : 'today'}`)
   }
 
   const tabs: { v: F; l: string }[] = [{ v: 'open', l: 'All open' }, { v: 'assignment', l: '📝 Assignments' }, { v: 'task', l: '☑️ Tasks' }, { v: 'exam', l: '🎯 Exams' }, { v: 'done', l: 'Done' }]
@@ -61,7 +61,7 @@ export default function Tasks() {
         <input className="input" placeholder="Search…" value={q} onChange={(e) => setQ(e.target.value)} style={{ maxWidth: 220, marginLeft: 'auto', height: 30 }} />
       </div>
       <div className="card" style={{ marginBottom: 16, padding: 10 }}>
-        <input className="input bare" style={{ height: 36 }} placeholder="＋ Quick add — type and press Enter (words like “exam” or “essay” set the type)" value={quick}
+        <input className="input bare" style={{ height: 36 }} placeholder="＋ Quick add — e.g. “chem midterm fri” or “essay draft due dec 3”" value={quick}
           onChange={(e) => setQuick(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && addQuick()} />
       </div>
 
