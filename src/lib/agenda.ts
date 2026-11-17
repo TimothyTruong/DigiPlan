@@ -56,7 +56,10 @@ export function useAgenda(from: ISODate, to: ISODate): Entry[] {
       out.push({ key: `w:${w.id}`, date: w.date, start: w.time, title: w.title, kind: 'workout', color: KIND_ACCENT.workout, done: w.done, workoutId: w.id })
     }
     if (settings.showGoogle && gEvents) {
-      for (const g of gEvents) out.push({ key: `g:${g.calendarId}:${g.id}`, date: g.date, start: g.start, end: g.end, title: g.title, kind: 'google', color: g.color, done: false, location: g.location, google: g })
+      // Hide copies we pushed ourselves (the planner item is already listed), but keep ones whose
+      // item no longer exists here (deleted while offline, or pushed from another browser).
+      const itemIds = new Set(items.map((i) => i.id))
+      for (const g of gEvents) if (!g.petalId || !itemIds.has(g.petalId)) out.push({ key: `g:${g.calendarId}:${g.id}`, date: g.date, start: g.start, end: g.end, title: g.title, kind: 'google', color: g.color, done: false, location: g.location, google: g })
     }
     return out.sort((a, b) => a.date !== b.date ? (a.date < b.date ? -1 : 1)
       : (a.start ?? '') !== (b.start ?? '') ? (!a.start ? -1 : !b.start ? 1 : a.start < b.start ? -1 : 1)

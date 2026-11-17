@@ -2,7 +2,7 @@ import { useState, type CSSProperties } from 'react'
 import { PageShell } from '../components/PageShell'
 import { StylePicker } from '../components/StylePicker'
 import { IconView, Seg, toast } from '../components/ui'
-import { connectGoogle, disconnectGoogle, isConnected, listCalendars, useGoogle } from '../lib/google'
+import { clearGoogleCache, connectGoogle, disconnectGoogle, isConnected, listCalendars, useGoogle } from '../lib/google'
 import { icsToItems, parseIcs } from '../lib/ics'
 import { uid } from '../lib/id'
 import { exportData, useStore, type State } from '../store/store'
@@ -124,7 +124,9 @@ function GoogleSection() {
       await connectGoogle(id)
       const cals = await listCalendars()
       const prev = new Map(settings.googleCalendars.map((c) => [c.id, c.enabled]))
-      setSettings({ googleCalendars: cals.map((c, i) => ({ ...c, enabled: prev.get(c.id) ?? i === 0 })) })
+      // New calendars default to on only for the primary one (calendarList order isn't guaranteed).
+      setSettings({ googleCalendars: cals.map((c) => ({ id: c.id, summary: c.summary, color: c.color, enabled: prev.get(c.id) ?? c.primary })) })
+      clearGoogleCache()
       toast('Google Calendar connected')
     } catch (e: any) { toast(e.message) } finally { setBusy(false) }
   }
@@ -155,7 +157,7 @@ function GoogleSection() {
             <label key={c.id} className="row small"><input type="checkbox" className="check" checked={c.enabled}
               onChange={(e) => {
                 setSettings({ googleCalendars: settings.googleCalendars.map((x) => (x.id === c.id ? { ...x, enabled: e.target.checked } : x)) })
-                useGoogle.setState({ events: {}, fetchedAt: {} }) // calendar set changed: drop cached ranges
+                clearGoogleCache() // calendar set changed: drop cached ranges (and in-flight results)
               }} />
               <span className="dot" style={{ background: c.color }} />{c.summary}</label>
           ))}
