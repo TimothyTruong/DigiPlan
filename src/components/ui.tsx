@@ -26,14 +26,14 @@ export function Modal({ open, onClose, title, children, wide, footer }: {
     const t = setTimeout(() => {
       const el = ref.current
       if (!el || el.contains(document.activeElement)) return
-      el.querySelector<HTMLElement>('input:not([type=checkbox]):not([type=file]), textarea, select, .modal-foot button')?.focus()
+      el.focus() // no autoFocus field: focus the dialog itself so nothing scrolls out of view
     }, 0)
     return () => { window.removeEventListener('keydown', onKey); clearTimeout(t); prev?.focus?.() }
   }, [open, onClose])
   if (!open) return null
   return (
     <div className="overlay" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
-      <div className={`modal${wide ? ' wide' : ''}`} role="dialog" aria-modal="true" aria-labelledby={title !== undefined ? labelId : undefined} ref={ref}>
+      <div className={`modal${wide ? ' wide' : ''}`} role="dialog" aria-modal="true" aria-labelledby={title !== undefined ? labelId : undefined} tabIndex={-1} style={{ outline: 'none' }} ref={ref}>
         {title !== undefined && (
           <div className="modal-head">
             <h2 id={labelId}>{title}</h2>

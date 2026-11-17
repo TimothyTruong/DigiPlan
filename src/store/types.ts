@@ -62,13 +62,21 @@ export interface Recipe {
   id: string
   name: string
   emoji: string
-  imageId?: string
+  imageId?: string // uploaded photo (blob store)
+  imageUrl?: string // remote photo (e.g. from a recipe database or pasted link)
+  sourceUrl?: string // original recipe page
+  videoUrl?: string
   servings?: number
   prepMins?: number
   ingredients: string[]
   steps: string
   tags: string[]
+  cuisine?: string
+  notes?: string
+  rating?: number // 1..5
   favorite?: boolean
+  external?: { provider: 'themealdb'; id: string }
+  addedAt?: number
 }
 export interface GroceryItem { id: string; text: string; done: boolean; fromRecipe?: string }
 

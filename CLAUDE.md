@@ -26,6 +26,8 @@
   pushes items (create/update/delete) tagged with `extendedProperties.private.petalId` so they aren't shown twice.
 - `src/lib/sync.ts`: the only place UI should push/delete/skip against Google. Rules: never resurrect items deleted
   mid-request, keep `gcal` when Google is unreachable (avoids orphans/duplicates), surface failures in the toast.
+- `src/lib/mealdb.ts`: TheMealDB client (CORS-enabled, no auth; key "1" is dev-only → `VITE_MEALDB_KEY` for production).
+  Recipes from it keep `external.id` so re-saving doesn't duplicate. Remote images use the `/small` thumbnail in grids.
 - `src/lib/ics.ts`: .ics timetable import → items (lectures→class, "exam/midterm"→exam with countdown).
 - Theming: each page/class has one accent hex; all tints derive via `color-mix` in CSS (`--accent-soft`, `--accent-ink`).
   Presets in `src/theme/themes.ts`. Covers: `preset:<key>` | blob id | `none`. Icons: emoji | `img:<blobId>`.

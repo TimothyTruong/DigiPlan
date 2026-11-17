@@ -37,7 +37,7 @@ export const SECTIONS: SectionDef[] = [
   { id: 'calendar', label: 'Calendar', path: '/calendar', blurb: 'Classes, deadlines and plans.', style: { accent: '#A9B2EC', banner: 'preset:lavender', icon: '🗓️' } },
   { id: 'tasks', label: 'Tasks', path: '/tasks', blurb: 'Assignments, to-dos and exams.', style: { accent: '#E8C872', banner: 'preset:butter', icon: '✅' } },
   { id: 'classes', label: 'Classes', path: '/classes', blurb: 'Notes, links and files for every class.', style: { accent: '#BCA7E4', banner: 'preset:grid', icon: '📚' } },
-  { id: 'meals', label: 'Meals', path: '/meals', blurb: 'Recipes, the week’s plan and the grocery list.', style: { accent: '#F2B48C', banner: 'preset:sunset', icon: '🥗' } },
+  { id: 'meals', label: 'Recipes', path: '/meals', blurb: 'Your recipe base, fresh ideas, the week’s meals and groceries.', style: { accent: '#F2B48C', banner: 'preset:sunset', icon: '🥗' } },
   { id: 'fitness', label: 'Fitness', path: '/fitness', blurb: 'Plan workouts, log sets, keep moving.', style: { accent: '#8ED3C2', banner: 'preset:seaglass', icon: '🏃‍♀️' } },
   { id: 'habits', label: 'Habits & Wellness', path: '/habits', blurb: 'Gentle streaks and how you’re feeling.', style: { accent: '#9CC19F', banner: 'preset:matcha', icon: '🌿' } },
   { id: 'budget', label: 'Budget', path: '/budget', blurb: 'Planned vs. actual, month by month.', style: { accent: '#9CC3E8', banner: 'preset:sky', icon: '💸' } },
