@@ -322,5 +322,9 @@ export async function removePushed(item: Item) {
   if (!item.gcal || !isConnected()) return
   try {
     await gfetch(`/calendars/${encodeURIComponent(item.gcal.calendarId)}/events/${encodeURIComponent(item.gcal.eventId)}`, { method: 'DELETE' })
-  } catch { /* already gone (404/410) or offline — best effort */ }
+  } catch (e) {
+    // Already gone is success. Anything else (offline, 5xx, 429) must surface so the caller keeps the gcal ref.
+    if (e instanceof GoogleApiError && (e.status === 404 || e.status === 410)) return
+    throw e
+  }
 }

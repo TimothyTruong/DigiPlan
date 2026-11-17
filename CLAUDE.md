@@ -24,12 +24,16 @@
 - `src/lib/agenda.ts` `useAgenda(from,to)`: merges items + workouts + Google events into sorted `Entry[]`. Use it for any dated view.
 - `src/lib/google.ts`: Google Identity Services token flow (browser-only). Reads events (filtered to enabled calendars),
   pushes items (create/update/delete) tagged with `extendedProperties.private.petalId` so they aren't shown twice.
+- `src/lib/sync.ts`: the only place UI should push/delete/skip against Google. Rules: never resurrect items deleted
+  mid-request, keep `gcal` when Google is unreachable (avoids orphans/duplicates), surface failures in the toast.
 - `src/lib/ics.ts`: .ics timetable import → items (lectures→class, "exam/midterm"→exam with countdown).
 - Theming: each page/class has one accent hex; all tints derive via `color-mix` in CSS (`--accent-soft`, `--accent-ink`).
   Presets in `src/theme/themes.ts`. Covers: `preset:<key>` | blob id | `none`. Icons: emoji | `img:<blobId>`.
 - Pages are lazy-loaded except Today. Keep the main chunk lean (currently ~76 KB gzip).
 
 ## Gotchas
+- Google: `fetchEvents` uses allSettled (one bad calendar doesn't hide the rest); `removePushed` throws on anything but 404/410.
+  Tests in `src/lib/__tests__/google.test.ts` + `sync.test.ts` stub fetch/GIS — run them after any Google change.
 - Google tokens last ~1h, no silent refresh without a backend; user must press Reconnect. Proper fix = small backend w/ refresh tokens.
 - Google OAuth needs `VITE_GOOGLE_CLIENT_ID` (or entered in Settings) and the deploy origin in Authorized JS origins.
 - Data is per-browser (no sync/accounts yet). Clearing site data wipes it — export backups.

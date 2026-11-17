@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react'
 import { create } from 'zustand'
 import { format } from 'date-fns'
 import { fromISO, todayISO } from '../lib/dates'
-import { isConnected, pushItem, removePushed, useGoogle } from '../lib/google'
+import { useGoogle } from '../lib/google'
+import { deleteSynced, skipSynced, syncAfterSave } from '../lib/sync'
 import { uid } from '../lib/id'
 import { useStore } from '../store/store'
 import type { Freq, Item, ItemKind } from '../store/types'
@@ -30,7 +31,7 @@ export function ItemEditor() {
   const { open, item: initial, occurrence } = useEditor()
   const courses = useStore((s) => s.courses)
   const exists = useStore((s) => !!initial && s.items.some((i) => i.id === initial.id))
-  const { upsertItem, deleteItem, skipOccurrence, addItems } = useStore.getState()
+  const { upsertItem } = useStore.getState()
   const gToken = useGoogle((s) => s.token)
   const [it, setIt] = useState<Item | undefined>(initial)
   const [push, setPush] = useState(false)
@@ -53,25 +54,15 @@ export function ItemEditor() {
     if (next.end && next.start && next.end <= next.start) next.end = undefined
     upsertItem(next)
     close()
-    if (push && isConnected()) {
-      try {
-        const gcal = await pushItem(next)
-        useStore.getState().upsertItem({ ...next, gcal })
-        toast('Saved · synced to Google Calendar')
-      } catch (e: any) { toast(e.message) }
-    } else if (!push && next.gcal) {
-      removePushed(next)
-      useStore.getState().upsertItem({ ...next, gcal: undefined })
-    } else toast(exists ? 'Saved' : `${KIND_META[next.kind].label} added`)
+    const r = await syncAfterSave(next, push)
+    toast(r?.message ?? (exists ? 'Saved' : `${KIND_META[next.kind].label} added`))
   }
 
-  function remove() {
+  async function remove() {
     if (!it) return
-    const snapshot = it
-    deleteItem(it.id)
-    removePushed(it)
     close()
-    toast('Deleted', { label: 'Undo', run: () => addItems([{ ...snapshot, gcal: undefined }]) })
+    const { undo, warning } = await deleteSynced(it)
+    toast(warning ?? 'Deleted', { label: 'Undo', run: undo })
   }
 
   return (
@@ -80,7 +71,7 @@ export function ItemEditor() {
         <div className="row">
           {exists && <button className="btn ghost danger" onClick={remove}>Delete</button>}
           {exists && it.recurrence && occurrence && (
-            <button className="btn ghost" onClick={() => { skipOccurrence(it.id, occurrence); close(); toast(`Skipped ${format(fromISO(occurrence), 'MMM d')}`) }}>Skip this date only</button>
+            <button className="btn ghost" onClick={async () => { close(); const r = await skipSynced(it.id, occurrence); toast(r?.message ?? `Skipped ${format(fromISO(occurrence), 'MMM d')}`) }}>Skip this date only</button>
           )}
         </div>
         <div className="row">
