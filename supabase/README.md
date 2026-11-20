@@ -36,7 +36,9 @@ Supabase's built-in email sender is for testing and allows only a few emails per
 set Authentication → Emails → **SMTP Settings** to a real provider (e.g. Resend, free tier).
 
 ## 6. Connect the app
-Project Settings → API → copy **Project URL** and the **anon public** key (both are safe to expose; RLS protects data).
+Project Settings → **Data API** → copy the **Project URL** (it looks like `https://<project-id>.supabase.co`; do **not** include
+`/rest/v1/`). Project Settings → **API Keys** → copy the **publishable** key (`sb_publishable_…`, called "anon public" on older
+projects). Both are safe to expose; RLS protects data. Never use the `sb_secret_…` / `service_role` key — the deploy refuses it.
 - **Live site**: GitHub repo → Settings → Secrets and variables → Actions → **Variables** → add
   `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` (and `VITE_GOOGLE_CLIENT_ID` if using Calendar).
   Then Actions → "Deploy to GitHub Pages" → **Run workflow** (or push any commit).
