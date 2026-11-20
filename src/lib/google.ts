@@ -147,6 +147,17 @@ export class GoogleApiError extends Error {
 
 const EXPIRED_MSG = 'Google session expired — reconnect in Settings'
 
+/** Turn Google's 403 reasons into a fix the user can act on. */
+export function explain403(reason: string, message = ''): string {
+  if (/accessNotConfigured|SERVICE_DISABLED/i.test(reason) || /has not been used in project|is disabled/i.test(message))
+    return 'The Google Calendar API is turned off for this app — in Google Cloud: APIs & Services → Library → Google Calendar API → Enable, then reconnect'
+  if (/insufficientPermissions|ACCESS_TOKEN_SCOPE_INSUFFICIENT/i.test(reason) || /insufficient authentication scopes/i.test(message))
+    return 'Calendar permission wasn’t granted — reconnect and tick the calendar boxes on Google’s screen'
+  if (/domainPolicy|orgPolicy/i.test(reason))
+    return 'Your organisation (e.g. your school) blocks this app from calendars — try a personal Google account'
+  return 'Google denied access to this calendar'
+}
+
 async function gfetch(path: string, init?: RequestInit) {
   const { token } = useGoogle.getState()
   if (!token || !isConnected()) throw new GoogleApiError('Not connected to Google', 0)
@@ -162,10 +173,14 @@ async function gfetch(path: string, init?: RequestInit) {
     throw new GoogleApiError(EXPIRED_MSG, 401)
   }
   if (!res.ok) {
-    let reason = ''
-    try { reason = (await res.json())?.error?.errors?.[0]?.reason ?? '' } catch { /* non-JSON body */ }
+    let reason = '', message = ''
+    try {
+      const err = (await res.json())?.error
+      reason = [err?.errors?.[0]?.reason, ...(err?.details ?? []).map((d: any) => d?.reason)].filter(Boolean).join(' ')
+      message = err?.message ?? ''
+    } catch { /* non-JSON body */ }
     if (res.status === 429 || /rateLimit/i.test(reason)) throw new GoogleApiError('Google is rate-limiting requests — try again in a minute', res.status)
-    if (res.status === 403) throw new GoogleApiError('Google denied access to this calendar', 403)
+    if (res.status === 403) throw new GoogleApiError(explain403(reason, message), 403)
     throw new GoogleApiError(`Google Calendar error ${res.status}`, res.status)
   }
   return res.status === 204 ? null : res.json()

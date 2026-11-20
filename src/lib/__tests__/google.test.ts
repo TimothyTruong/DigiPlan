@@ -613,3 +613,16 @@ describe('pushItem / removePushed', () => {
     expect(fetch).not.toHaveBeenCalled()
   })
 })
+
+describe('explain403', async () => {
+  const { explain403 } = await import('../google')
+  it('maps Google reasons to fixes', () => {
+    expect(explain403('accessNotConfigured SERVICE_DISABLED')).toMatch(/Calendar API is turned off/)
+    expect(explain403('', 'Google Calendar API has not been used in project 561 before or it is disabled.')).toMatch(/Enable/)
+    expect(explain403('insufficientPermissions')).toMatch(/tick the calendar boxes/)
+    expect(explain403('', 'Request had insufficient authentication scopes.')).toMatch(/permission/)
+    expect(explain403('domainPolicy')).toMatch(/organisation/)
+    expect(explain403('forbidden')).toBe('Google denied access to this calendar')
+  })
+})
+
