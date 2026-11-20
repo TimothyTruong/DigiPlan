@@ -90,7 +90,8 @@ function loadGis(): Promise<void> {
   return gisPromise
 }
 
-export async function connectGoogle(clientId: string): Promise<void> {
+/** `loginHint` (an email) pre-selects that Google account so Calendar uses the same account the user signed in with. */
+export async function connectGoogle(clientId: string, loginHint?: string): Promise<void> {
   if (!clientId?.trim()) throw new Error('Add a Google OAuth client ID first')
   await loadGis()
   const oauth2 = window.google.accounts.oauth2
@@ -98,6 +99,7 @@ export async function connectGoogle(clientId: string): Promise<void> {
     const client = oauth2.initTokenClient({
       client_id: clientId.trim(),
       scope: SCOPES,
+      ...(loginHint && { login_hint: loginHint }),
       callback: (resp: any) => {
         if (resp?.error) {
           reject(new Error(resp.error === 'access_denied' ? 'Google access was denied' : resp.error_description || resp.error))
@@ -120,7 +122,8 @@ export async function connectGoogle(clientId: string): Promise<void> {
       // Fires for popup_failed_to_open / popup_closed / unknown.
       error_callback: (e: any) => reject(new Error(
         e?.type === 'popup_failed_to_open' ? 'Google sign-in popup was blocked — allow popups for this site'
-          : e?.type === 'popup_closed' ? 'Google sign-in was closed' : e?.message || 'Google sign-in failed')),
+          : e?.type === 'popup_closed' ? 'Google sign-in was closed. If Google said “Access blocked”, this Google account must be added as a test user (Google Cloud → Audience)'
+          : e?.message || 'Google sign-in failed')),
     })
     client.requestAccessToken({ prompt: '' })
   })

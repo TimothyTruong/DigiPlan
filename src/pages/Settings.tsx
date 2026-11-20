@@ -128,7 +128,8 @@ function GoogleSection() {
     setBusy(true)
     try {
       if (!ENV_CLIENT_ID) setSettings({ googleClientId: id })
-      await connectGoogle(id)
+      const u = useCloud.getState().user
+      await connectGoogle(id, u?.provider === 'google' ? u.email : undefined)
       const cals = await listCalendars()
       const prev = new Map(settings.googleCalendars.map((c) => [c.id, c.enabled]))
       // New calendars default to on only for the primary one (calendarList order isn't guaranteed).

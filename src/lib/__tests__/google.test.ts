@@ -128,6 +128,22 @@ describe('connectGoogle', () => {
     expect(scripts).toHaveLength(1)
   })
 
+  it('passes login_hint so Calendar uses the signed-in Google account, and omits it otherwise', async () => {
+    const g = await load()
+    const oauth2 = oauth2Mock()
+    win.google = { accounts: { oauth2 } }
+    await g.connectGoogle('cid', 'tim@gmail.com')
+    expect(oauth2.initTokenClient.mock.calls[0][0].login_hint).toBe('tim@gmail.com')
+    await g.connectGoogle('cid')
+    expect('login_hint' in oauth2.initTokenClient.mock.calls[1][0]).toBe(false)
+  })
+
+  it('closed popup explains the test-user fix', async () => {
+    const g = await load()
+    win.google = { accounts: { oauth2: oauth2Mock({ error: { type: 'popup_closed' } }) } }
+    await expect(g.connectGoogle('cid')).rejects.toThrow(/test user/)
+  })
+
   it('script load failure rejects, removes the tag, and a retry injects a new one', async () => {
     const g = await load()
     const p1 = g.connectGoogle('cid')
