@@ -18,7 +18,7 @@ export function PageShell({ section, title, subtitle, actions, children }: {
       <div className={`cover${bg ? '' : ' none'}`} style={bg ? { background: bg } : undefined}>
         <div className="cover-actions">
           <button className="btn sm glass" onClick={() => setPicker('banner')}>Change cover</button>
-          <button className="btn sm glass" onClick={() => setPicker('color')}>Theme</button>
+          <button className="btn sm glass theme-btn" onClick={() => setPicker('color')}>Theme</button>
         </div>
       </div>
       <div className="page">

@@ -49,7 +49,7 @@ export function StylePicker({ open, onClose, value, onChange, tabs = ['color', '
       {tab === 'icon' && (
         <div className="stack">
           <div className="emoji-grid">
-            {EMOJI_PRESETS.map((e) => <button key={e} className={value.icon === e ? 'on' : ''} onClick={() => onChange({ icon: e })}>{e}</button>)}
+            {EMOJI_PRESETS.map((e) => <button key={e} aria-label={`Icon ${e}`} aria-pressed={value.icon === e} className={value.icon === e ? 'on' : ''} onClick={() => onChange({ icon: e })}>{e}</button>)}
           </div>
           <div className="row">
             <input className="input" placeholder="Or type any emoji" maxLength={8} style={{ maxWidth: 200 }} onChange={(e) => e.target.value.trim() && onChange({ icon: e.target.value.trim() })} />

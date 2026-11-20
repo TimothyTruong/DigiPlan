@@ -80,8 +80,8 @@ export function ItemEditor() {
         </div>
       </>}>
       <div className="stack" style={{ gap: 14 }} onKeyDown={(e) => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) save() }}>
-        <Seg<ItemKind> value={it.kind} onChange={(kind) => set({ kind, countdown: kind === 'exam' ? true : it.countdown })} label="Type"
-          options={(Object.keys(KIND_META) as ItemKind[]).map((k) => ({ value: k, label: `${KIND_META[k].emoji} ${KIND_META[k].label}` }))} />
+        <Seg<ItemKind> className="kinds" value={it.kind} onChange={(kind) => set({ kind, countdown: kind === 'exam' ? true : it.countdown })} label="Type"
+          options={(Object.keys(KIND_META) as ItemKind[]).map((k) => ({ value: k, label: <span className="kind-opt"><span aria-hidden>{KIND_META[k].emoji}</span> <span>{KIND_META[k].label}</span></span> }))} />
         <input className="input" style={{ height: 44, fontSize: 18, fontWeight: 600 }} autoFocus placeholder={it.kind === 'exam' ? 'e.g. Biology midterm' : it.kind === 'assignment' ? 'e.g. Essay draft' : 'Title'}
           value={it.title} onChange={(e) => set({ title: e.target.value })} onKeyDown={(e) => { if (e.key === 'Enter' && !e.metaKey && !e.ctrlKey) save() }} />
 

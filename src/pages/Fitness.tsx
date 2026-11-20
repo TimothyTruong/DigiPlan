@@ -3,6 +3,7 @@ import { useSearch } from 'wouter'
 import { format } from 'date-fns'
 import { PageShell } from '../components/PageShell'
 import { Empty, Modal, Seg, toast } from '../components/ui'
+import { HealthSyncButton, StepsBar } from '../components/Health'
 import { addDaysISO, fmtTime, fromISO, todayISO, weekDays } from '../lib/dates'
 import { uid } from '../lib/id'
 import { useStore } from '../store/store'
@@ -50,6 +51,7 @@ export default function Fitness() {
         <div className="stat"><div className="l">Active minutes</div><div className="v">{minutes}</div><div className="small muted">this week</div></div>
         <div className="stat"><div className="l">Streak</div><div className="v">{streak} wk{streak === 1 ? '' : 's'}</div><div className="small muted">with at least one workout</div></div>
       </div>
+      <Activity />
       <div className="card">
         <div className="cal-toolbar">
           <button className="btn icon" onClick={() => setAnchor(addDaysISO(anchor, -7))} aria-label="Previous week">‹</button>
@@ -86,6 +88,40 @@ export default function Fitness() {
       </div>
       {editing && <WorkoutEditor w={editing} onClose={() => setEditing(null)} />}
     </PageShell>
+  )
+}
+
+/** Steps + sleep from Apple Health (or typed in): today vs goal and the last 14 days. */
+function Activity() {
+  const t = todayISO()
+  const wellness = useStore((s) => s.wellness)
+  const { stepGoal, sleepGoal, healthLastSync } = useStore((s) => s.settings)
+  const days = useMemo(() => Array.from({ length: 14 }, (_, i) => addDaysISO(t, i - 13)), [t])
+  const vals = (k: 'steps' | 'sleep') => days.map((d) => wellness[d]?.[k]).filter((v): v is number => v !== undefined)
+  const avg = (a: number[]) => (a.length ? a.reduce((x, y) => x + y, 0) / a.length : undefined)
+  const steps7 = avg(days.slice(7).map((d) => wellness[d]?.steps).filter((v): v is number => v !== undefined))
+  const sleepAvg = avg(vals('sleep'))
+  const max = Math.max(stepGoal * 1.3, ...vals('steps'))
+  return (
+    <section className="card" style={{ marginBottom: 16 }}>
+      <div className="card-head"><h3>❤️ Daily activity</h3><div className="row"><span className="tiny muted">{healthLastSync ? `Apple Health · synced ${format(healthLastSync, 'MMM d, h:mma')}` : 'Not synced yet'}</span><HealthSyncButton /></div></div>
+      <div className="grid cols-2" style={{ alignItems: 'end' }}>
+        <div className="stack" style={{ gap: 14 }}>
+          <StepsBar steps={wellness[t]?.steps} goal={stepGoal} />
+          <div className="row wrap" style={{ gap: 18 }}>
+            <div><div className="tiny muted">7-day avg steps</div><b>{steps7 !== undefined ? Math.round(steps7).toLocaleString() : '—'}</b></div>
+            <div><div className="tiny muted">Avg sleep (14d)</div><b>{sleepAvg !== undefined ? `${sleepAvg.toFixed(1)}h` : '—'}</b> <span className="tiny muted">goal {sleepGoal}h</span></div>
+          </div>
+        </div>
+        <div>
+          <div className="spark" style={{ height: 72, position: 'relative' }} aria-label="Steps, last 14 days">
+            <span style={{ position: 'absolute', left: 0, right: 0, bottom: `${(stepGoal / max) * 100}%`, borderTop: '1.5px dashed var(--accent-line)' }} title={`Goal ${stepGoal}`} />
+            {days.map((d) => { const v = wellness[d]?.steps; return <i key={d} className={v === undefined ? 'gap' : ''} title={`${format(fromISO(d), 'EEE MMM d')}: ${v?.toLocaleString() ?? '—'} steps`} style={v !== undefined ? { height: `${Math.max(4, (v / max) * 100)}%`, opacity: v >= stepGoal ? 1 : 0.55 } : undefined} /> })}
+          </div>
+          <div className="row between tiny muted" style={{ marginTop: 4 }}><span>{format(fromISO(days[0]), 'MMM d')}</span><span>Today</span></div>
+        </div>
+      </div>
+    </section>
   )
 }
 

@@ -2,6 +2,7 @@ import { lazy, Suspense, useEffect, useState, type CSSProperties } from 'react'
 import { Link, Route, Switch, useLocation } from 'wouter'
 import { APP_NAME } from './config'
 import { ItemEditor, openEditor } from './components/ItemEditor'
+import { consumeHealthHash } from './components/Health'
 import { IconView, Toaster } from './components/ui'
 import { useStore } from './store/store'
 import { SECTIONS } from './theme/themes'
@@ -56,7 +57,7 @@ function NavLink({ id }: { id: (typeof SECTIONS)[number]['id'] }) {
   const style = useStore((st) => st.pages[id])
   const active = s.path === '/' ? loc === '/' : loc.startsWith(s.path)
   return (
-    <Link href={s.path} className={`nav-link${active ? ' active' : ''}`} style={{ '--accent': style.accent } as CSSProperties} aria-current={active ? 'page' : undefined}>
+    <Link href={s.path} className={`nav-link${active ? ' active' : ''}`} style={{ '--accent': style.accent } as CSSProperties} aria-current={active ? 'page' : undefined} aria-label={style.title ?? s.label} title={style.title ?? s.label}>
       <span className="nav-icon"><IconView icon={style.icon} /></span>{style.title ?? s.label}
     </Link>
   )
@@ -68,11 +69,13 @@ export function App() {
   const [loc] = useLocation()
   useEffect(() => { window.scrollTo(0, 0) }, [loc])
   useEffect(() => { const id = setTimeout(prefetch, 1500); return () => clearTimeout(id) }, [])
+  useEffect(() => { consumeHealthHash(); const on = () => consumeHealthHash(); window.addEventListener('hashchange', on); return () => window.removeEventListener('hashchange', on) }, [])
 
   return (
     <div className="app">
       <nav className="sidebar" aria-label="Main">
         <div className="brand"><img src="/favicon.svg" alt="" />{APP_NAME}</div>
+        <button className="side-add" onClick={() => openEditor({})} aria-label="New item" title="New item (N)"><span>+</span><b>New</b><kbd>N</kbd></button>
         <NavLink id="today" /><NavLink id="calendar" /><NavLink id="tasks" /><NavLink id="classes" />
         <div className="nav-label">Life</div>
         <NavLink id="meals" /><NavLink id="fitness" /><NavLink id="habits" /><NavLink id="budget" />
@@ -98,7 +101,6 @@ export function App() {
         </Suspense>
       </main>
       <MobileBar />
-      <button className="fab" onClick={() => openEditor({})} aria-label="Add new" title="Add (N)">+</button>
       <ItemEditor />
       <Toaster />
     </div>
@@ -127,7 +129,9 @@ function MobileBar() {
         </div>
       )}
       <nav className="mobile-bar" aria-label="Main mobile">
-        {CORE.map((id) => <MobileLink key={id} id={id} />)}
+        {CORE.slice(0, 2).map((id) => <MobileLink key={id} id={id} />)}
+        <button className="bar-add" onClick={() => openEditor({})} aria-label="Add new"><span>+</span></button>
+        {CORE.slice(2).map((id) => <MobileLink key={id} id={id} />)}
         <button className={`more-btn${extraActive || open ? ' active' : ''}`} aria-expanded={open} onClick={() => setOpen(!open)}><span>☰</span>More</button>
       </nav>
     </>

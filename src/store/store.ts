@@ -4,6 +4,7 @@ import { createStore, del, get, set } from 'idb-keyval'
 import { uid } from '../lib/id'
 import { addDaysISO, todayISO } from '../lib/dates'
 import { SECTIONS } from '../theme/themes'
+import type { HealthDay } from '../lib/health'
 import type {
   BudgetCategory, Course, GroceryItem, Habit, ISODate, Item, MealEntry, MealSlot, PageStyle, Recipe,
   SectionId, Settings, Txn, Wellness, Workout,
@@ -57,11 +58,27 @@ interface Actions {
   deleteHabit: (id: string) => void
   toggleHabit: (id: string, date: ISODate) => void
   setWellness: (date: ISODate, w: Partial<Wellness>) => void
+  importHealth: (days: HealthDay[]) => number
   setCategories: (c: BudgetCategory[]) => void
   upsertTxn: (t: Txn) => void
   deleteTxn: (id: string) => void
   replaceAll: (s: Partial<State>) => void
   clearAll: () => void
+}
+
+/** Tick habits whose `auto` rule is met on the given dates. Never unticks (a manual tick wins). */
+export function autoTick(habits: Habit[], wellness: Record<ISODate, Wellness>, dates: ISODate[]): Habit[] {
+  let changed = false
+  const out = habits.map((h) => {
+    if (!h.auto) return h
+    let log = h.log
+    for (const d of dates) {
+      const v = wellness[d]?.[h.auto.metric]
+      if (typeof v === 'number' && v >= h.auto.min && !log[d]) { log = { ...log, [d]: true }; changed = true }
+    }
+    return log === h.log ? h : { ...h, log }
+  })
+  return changed ? out : habits
 }
 
 const upsert = <T extends { id: string }>(arr: T[], v: T) => {
@@ -74,7 +91,7 @@ const defaultPages = () => Object.fromEntries(SECTIONS.map((s) => [s.id, { ...s.
 
 const emptyState = (): State => ({
   settings: {
-    name: '', colorMode: 'system', weekStartsOn: 1, currency: '$', googleCalendars: [], showGoogle: true,
+    name: '', colorMode: 'system', weekStartsOn: 1, currency: '$', googleCalendars: [], showGoogle: true, stepGoal: 8000, sleepGoal: 8,
     calendarView: 'month', onboarded: false,
   },
   pages: defaultPages(),
@@ -134,8 +151,10 @@ export function demoState(): State {
   ]
   for (let i = 1; i < 26; i++) {
     if (i % 6 === 0) continue
-    s.wellness[d(-i)] = { mood: 2 + ((i * 7) % 4), energy: 2 + ((i * 5) % 4), sleep: 6 + ((i * 3) % 4) * 0.5, water: 4 + (i % 5) }
+    s.wellness[d(-i)] = { mood: 2 + ((i * 7) % 4), energy: 2 + ((i * 5) % 4), sleep: 6 + ((i * 3) % 4) * 0.5, water: 4 + (i % 5), steps: 4200 + ((i * 2731) % 7600) }
   }
+  s.wellness[t] = { steps: 5240, sleep: 7.5 }
+  s.habits.push({ id: uid(), name: '8k steps', emoji: '👟', perWeek: 5, log: log([1, 3, 4]), auto: { metric: 'steps', min: 8000 } })
   const [rent, groc, out] = s.categories
   const mo = t.slice(0, 8)
   s.txns = [
@@ -205,7 +224,28 @@ export const useStore = create<State & Actions>()(
             return { ...h, log }
           }),
         })),
-        setWellness: (date, w) => mut((s) => ({ wellness: { ...s.wellness, [date]: { ...s.wellness[date], ...w } } })),
+        setWellness: (date, w) => mut((s) => {
+          const wellness = { ...s.wellness, [date]: { ...s.wellness[date], ...w } }
+          return { wellness, habits: autoTick(s.habits, wellness, [date]) }
+        }),
+        importHealth: (days) => {
+          let n = 0
+          mut((s) => {
+            const wellness = { ...s.wellness }
+            for (const d of days) {
+              const cur = wellness[d.date] ?? {}
+              const fromHealth = new Set(cur.fromHealth ?? [])
+              const next = { ...cur }
+              if (d.steps !== undefined) { next.steps = d.steps; fromHealth.add('steps') }
+              if (d.sleep !== undefined) { next.sleep = d.sleep; fromHealth.add('sleep') }
+              next.fromHealth = [...fromHealth]
+              wellness[d.date] = next
+              n++
+            }
+            return { wellness, habits: autoTick(s.habits, wellness, days.map((d) => d.date)), settings: { ...s.settings, healthLastSync: Date.now() } }
+          })
+          return n
+        },
         setCategories: (c) => mut(() => ({ categories: c })),
         upsertTxn: (t) => mut((s) => ({ txns: upsert(s.txns, t) })),
         deleteTxn: (id) => mut((s) => ({ txns: s.txns.filter((t) => t.id !== id) })),

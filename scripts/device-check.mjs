@@ -26,6 +26,8 @@ export const DEVICES = {
   'ipad-pro-13-landscape': custom(1366, 1024),
 }
 
+// "+" is a floating button on tablet/desktop and lives in the tab bar on phones.
+const add = async (p) => { if (await p.locator('.side-add').isVisible()) await p.click('.side-add'); else await p.click('.bar-add') }
 // Each scenario: navigate, optionally act, then audit.
 const SCENARIOS = [
   { name: 'today', path: '/' },
@@ -43,8 +45,9 @@ const SCENARIOS = [
   { name: 'habits', path: '/habits' },
   { name: 'budget', path: '/budget' },
   { name: 'settings', path: '/settings' },
-  { name: 'editor', path: '/calendar', act: (p) => p.click('.fab') },
-  { name: 'editor-assignment', path: '/tasks', act: async (p) => { await p.click('.fab'); await p.click('.modal button[role=radio]:has-text("Assignment")'); await p.click('.modal summary') } },
+  { name: 'more-sheet', path: '/', act: async (p) => { if (await p.locator('.more-btn').isVisible()) await p.click('.more-btn') } },
+  { name: 'editor', path: '/calendar', act: add },
+  { name: 'editor-assignment', path: '/tasks', act: async (p) => { await add(p); await p.click('.modal button[role=radio]:has-text("Assignment")'); await p.click('.modal summary') } },
   { name: 'style-picker', path: '/', act: (p) => p.click('.page-icon') },
 ]
 
@@ -133,7 +136,23 @@ function audit() {
   }
   if (spill.length) problems.push({ level: 'warn', kind: 'text-spill', msg: `${spill.length} elements with overflowing text`, items: spill.slice(0, 6) })
 
-  // 5. Modal must fit: header and footer reachable, not wider than viewport
+  // 5. Every control needs an accessible name (icon-only rail links, emoji buttons)
+  const unnamed = inter.filter((el) => /^(A|BUTTON)$/.test(el.tagName) && !(el.getAttribute('aria-label') || el.getAttribute('title') || el.textContent.replace(/[\p{Extended_Pictographic}\uFE0F\u200D\s]/gu, '') || el.querySelector('img[alt]:not([alt=""])')))
+  if (unnamed.length) problems.push({ level: 'error', kind: 'a11y-name', msg: `${unnamed.length} buttons/links without a text name`, items: unnamed.slice(0, 5).map(desc) })
+
+  // 6. Segmented controls must stay on one line (a wrapped pill looks broken)
+  const wrapped = [...scope.querySelectorAll('.seg')].filter((sg) => visible(sg) && getComputedStyle(sg).display !== 'grid' && new Set([...sg.children].map((c) => Math.round(c.getBoundingClientRect().top))).size > 1)
+  if (wrapped.length) problems.push({ level: 'warn', kind: 'seg-wrap', msg: `${wrapped.length} segmented control(s) wrap onto two lines`, items: wrapped.map(desc) })
+
+  // 7. The floating "+" must not cover controls on the first screen
+  const fab = document.querySelector('.fab')
+  if (!modal && fab && visible(fab)) {
+    const fr = fab.getBoundingClientRect()
+    const under = inter.filter((el) => !fab.contains(el)).filter((el) => { const r = el.getBoundingClientRect(); return Math.min(r.right, fr.right) - Math.max(r.left, fr.left) > 6 && Math.min(r.bottom, fr.bottom) - Math.max(r.top, fr.top) > 6 })
+    if (under.length) problems.push({ level: 'error', kind: 'fab-cover', msg: `floating + covers ${under.length} control(s) on first screen`, items: under.slice(0, 4).map(desc) })
+  }
+
+  // 8. Modal must fit: header and footer reachable, not wider than viewport
   if (modal) {
     const r = modal.getBoundingClientRect()
     if (r.width > vw + 1) problems.push({ level: 'error', kind: 'modal', msg: `modal ${Math.round(r.width)}px wider than viewport` })

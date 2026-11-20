@@ -78,7 +78,7 @@ function NewCourse({ open, onClose }: { open: boolean; onClose: () => void }) {
           <label className="field"><span>Code</span><input className="input" placeholder="CHEM 2203" value={code} onChange={(e) => setCode(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && create()} /></label>
         </div>
         <div className="field"><span>Colour</span><div className="swatches">{ACCENTS.map((a) => <button key={a.key} className={`swatch${accent === a.hex ? ' on' : ''}`} style={{ background: a.hex }} aria-label={a.name} onClick={() => setAccent(a.hex)} />)}</div></div>
-        <div className="field"><span>Icon</span><div className="emoji-grid">{EMOJI_PRESETS.slice(12, 24).map((e) => <button key={e} className={emoji === e ? 'on' : ''} onClick={() => setEmoji(e)}>{e}</button>)}</div></div>
+        <div className="field"><span>Icon</span><div className="emoji-grid">{EMOJI_PRESETS.slice(12, 24).map((e) => <button key={e} aria-label={`Icon ${e}`} aria-pressed={emoji === e} className={emoji === e ? 'on' : ''} onClick={() => setEmoji(e)}>{e}</button>)}</div></div>
       </div>
     </Modal>
   )

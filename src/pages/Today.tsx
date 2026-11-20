@@ -6,6 +6,7 @@ import { EntryRow } from '../components/EntryRow'
 import { openEditor } from '../components/ItemEditor'
 import { PageShell } from '../components/PageShell'
 import { Empty } from '../components/ui'
+import { HealthSyncButton, StepsBar } from '../components/Health'
 import { useAgenda } from '../lib/agenda'
 import { addDaysISO, fromISO, greeting, todayISO, weekDays } from '../lib/dates'
 import { useStore } from '../store/store'
@@ -66,6 +67,7 @@ export default function Today() {
         <div className="stack" style={{ gap: 16 }}>
           <WeekStrip />
           <HabitsToday />
+          <HealthToday />
           <MealsToday />
           <CheckIn />
         </div>
@@ -144,6 +146,24 @@ function MealsToday() {
   )
 }
 
+function HealthToday() {
+  const t = todayISO()
+  const w = useStore((s) => s.wellness[t])
+  const { stepGoal, sleepGoal } = useStore((s) => s.settings)
+  const accent = useStore((s) => s.pages.fitness.accent)
+  const synced = w?.fromHealth?.length
+  return (
+    <section className="card" style={{ '--accent': accent } as CSSProperties}>
+      <div className="card-head"><h3>❤️ Body</h3>{synced ? <span className="chip outline" title="Synced from Apple Health">Apple Health</span> : <HealthSyncButton className="btn sm ghost" />}</div>
+      <StepsBar steps={w?.steps} goal={stepGoal} />
+      <div className="row between small" style={{ marginTop: 12 }}>
+        <span>😴 <b>{w?.sleep !== undefined ? `${w.sleep}h` : '—'}</b> <span className="muted">sleep last night</span></span>
+        {w?.sleep !== undefined && <span className="muted">{w.sleep >= sleepGoal ? 'goal met ✓' : `${(sleepGoal - w.sleep).toFixed(1)}h under goal`}</span>}
+      </div>
+    </section>
+  )
+}
+
 function CheckIn() {
   const t = todayISO()
   const w = useStore((s) => s.wellness[t])
@@ -153,7 +173,7 @@ function CheckIn() {
     <section className="card" style={{ '--accent': accent } as CSSProperties}>
       <div className="card-head"><h3>💭 Check in</h3><Link href="/habits" className="small">Trends</Link></div>
       <div className="scale" role="radiogroup" aria-label="Mood">
-        {MOODS.map((m, i) => <button key={m} role="radio" aria-checked={w?.mood === i + 1} className={w?.mood === i + 1 ? 'on' : ''} onClick={() => set(t, { mood: i + 1 })}>{m}</button>)}
+        {MOODS.map((m, i) => <button key={m} aria-label={`Mood ${['very low', 'low', 'okay', 'good', 'great'][i]}`} role="radio" aria-checked={w?.mood === i + 1} className={w?.mood === i + 1 ? 'on' : ''} onClick={() => set(t, { mood: i + 1 })}>{m}</button>)}
       </div>
       <div className="row wrap" style={{ marginTop: 12, gap: 12 }}>
         <label className="row small grow">💧 <input type="number" min={0} max={20} className="input" style={{ width: 64 }} value={w?.water ?? ''} placeholder="0" onChange={(e) => set(t, { water: e.target.value === '' ? undefined : Number(e.target.value) })} /> glasses</label>

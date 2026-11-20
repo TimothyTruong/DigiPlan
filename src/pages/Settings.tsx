@@ -2,6 +2,7 @@ import { useState, type CSSProperties } from 'react'
 import { PageShell } from '../components/PageShell'
 import { StylePicker } from '../components/StylePicker'
 import { IconView, Seg, toast } from '../components/ui'
+import { HealthSyncButton, importHealthText } from '../components/Health'
 import { clearGoogleCache, connectGoogle, disconnectGoogle, isConnected, listCalendars, useGoogle } from '../lib/google'
 import { icsToItems, parseIcs } from '../lib/ics'
 import { uid } from '../lib/id'
@@ -85,6 +86,8 @@ export default function Settings() {
 
         <GoogleSection />
 
+        <HealthSection />
+
         <section className="card stack" style={{ gap: 10 }}>
           <h2>Import a timetable</h2>
           <div className="small muted">Most university portals export your schedule as an <b>.ics</b> file. Drop it here: lectures become repeating classes, and anything that says “exam” or “midterm” gets a countdown.</div>
@@ -164,6 +167,47 @@ function GoogleSection() {
           {!token && <div className="tiny muted">Google sessions last about an hour in this browser-only version — press Reconnect to refresh.</div>}
         </div>
       )}
+    </section>
+  )
+}
+
+function HealthSection() {
+  const settings = useStore((s) => s.settings)
+  const setSettings = useStore((s) => s.setSettings)
+  const link = `${location.origin}/#health=`
+  const sample = JSON.stringify({ days: [{ date: new Date().toISOString().slice(0, 10), steps: 8432, sleep: 7.4 }] })
+  return (
+    <section className="card stack" style={{ gap: 12 }}>
+      <div className="row between wrap">
+        <div><h2>Apple Health</h2><div className="small muted">Bring in steps and sleep each day. They show on Today, Fitness and Habits, and can tick habits for you.</div></div>
+        <HealthSyncButton className="btn primary" />
+      </div>
+      <div className="grid cols-2">
+        <label className="field"><span>Daily step goal</span><input type="number" min={0} step={500} className="input" value={settings.stepGoal} onChange={(e) => setSettings({ stepGoal: Math.max(0, Number(e.target.value) || 0) })} /></label>
+        <label className="field"><span>Sleep goal (hours)</span><input type="number" min={0} max={14} step={0.5} className="input" value={settings.sleepGoal} onChange={(e) => setSettings({ sleepGoal: Math.max(0, Number(e.target.value) || 0) })} /></label>
+      </div>
+      <details>
+        <summary className="small" style={{ cursor: 'pointer', fontWeight: 600 }}>Set up the iPhone shortcut (one time, ~3 minutes)</summary>
+        <div className="md small" style={{ marginTop: 8 }}>
+          <p className="muted">Websites can’t read Apple Health directly, so a Shortcut on your iPhone reads it and hands it to {''}this planner. Nothing leaves your phone except into this browser.</p>
+          <ol>
+            <li>Open <b>Shortcuts</b> → <b>+</b> → name it <b>Petal Health</b>.</li>
+            <li><b>Find Health Samples</b> — Type: <b>Steps</b>, Start Date: <b>is today</b>. Then <b>Calculate Statistics</b> → <b>Sum</b>. Rename the result <code>Steps</code>.</li>
+            <li><b>Find Health Samples</b> — Type: <b>Sleep Analysis</b>, Start Date: <b>is in the last 1 day</b>, Value: <b>is not In Bed</b> and <b>is not Awake</b>. Then <b>Get Details of Health Samples</b> → <b>Duration</b>, then <b>Calculate Statistics</b> → <b>Sum</b>. Rename it <code>Sleep</code>. (Hours or minutes both work.)</li>
+            <li><b>Format Date</b> — Current Date, Custom format <code>yyyy-MM-dd</code>.</li>
+            <li><b>Text</b>: <code>{'{"days":[{"date":"'}<i>Formatted Date</i>{'","steps":'}<i>Steps</i>{',"sleep":'}<i>Sleep</i>{'}]}'}</code></li>
+            <li>Finish with <b>one</b> of:
+              <ul>
+                <li><b>Copy to Clipboard</b> — then tap <b>❤️ Sync from Health</b> here. Use this if you added the planner to your Home Screen.</li>
+                <li><b>URL Encode</b> the text, then <b>Open URLs</b>: <code>{link}</code><i>URL Encoded Text</i> — fully automatic, but only updates the planner in <b>Safari</b> (Home Screen apps keep separate storage on iOS).</li>
+              </ul>
+            </li>
+            <li>Automation tab → <b>+</b> → <b>Time of Day</b> (e.g. 9:30pm, Daily) → <b>Run Immediately</b> → choose <b>Petal Health</b>.</li>
+          </ol>
+          <p className="muted">Sleep is stored on the day you wake up. Re-running the same day just updates it. Android/Google Fit isn’t supported: Google is shutting down the Fit web API and Health Connect has no web access.</p>
+        </div>
+      </details>
+      <div className="row wrap"><button className="btn sm ghost" onClick={() => importHealthText(sample)}>Try it with sample data</button></div>
     </section>
   )
 }

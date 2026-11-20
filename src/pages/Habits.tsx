@@ -2,13 +2,15 @@ import { useMemo, useState } from 'react'
 import { format } from 'date-fns'
 import { PageShell } from '../components/PageShell'
 import { Empty, Modal } from '../components/ui'
+import { HealthSyncButton } from '../components/Health'
 import { addDaysISO, fromISO, todayISO, weekDays } from '../lib/dates'
 import { uid } from '../lib/id'
 import { useStore } from '../store/store'
-import type { Habit, Wellness } from '../store/types'
+import type { Habit, HealthMetric } from '../store/types'
 import { EMOJI_PRESETS } from '../theme/themes'
 
 const MOODS = ['😣', '😕', '😐', '🙂', '😄']
+const MOOD_NAMES = ['very low', 'low', 'okay', 'good', 'great']
 const ENERGY = ['🪫', '😮‍💨', '🙂', '⚡', '🚀']
 
 /** Consecutive weeks meeting the weekly target, counting the current week only once it's met. */
@@ -73,14 +75,18 @@ function Wellbeing() {
   const t = todayISO()
   const wellness = useStore((s) => s.wellness)
   const set = useStore((s) => s.setWellness)
+  const { stepGoal, sleepGoal } = useStore((s) => s.settings)
   const today = wellness[t] ?? {}
   const series = useMemo(() => Array.from({ length: 30 }, (_, i) => addDaysISO(t, i - 29)), [t])
   const prev = useMemo(() => Array.from({ length: 30 }, (_, i) => addDaysISO(t, i - 59)), [t])
-  const metrics: { k: keyof Wellness; label: string; max: number; unit: string }[] = [
+  type K = 'mood' | 'energy' | 'sleep' | 'water' | 'steps'
+  const metrics: { k: K; label: string; max: number; unit: string }[] = [
+    { k: 'steps', label: 'Steps', max: Math.max(stepGoal * 1.5, 1), unit: '' }, { k: 'sleep', label: 'Sleep', max: Math.max(sleepGoal * 1.25, 1), unit: 'h' },
     { k: 'mood', label: 'Mood', max: 5, unit: '/5' }, { k: 'energy', label: 'Energy', max: 5, unit: '/5' },
-    { k: 'sleep', label: 'Sleep', max: 10, unit: 'h' }, { k: 'water', label: 'Water', max: 10, unit: ' glasses' },
+    { k: 'water', label: 'Water', max: 10, unit: ' glasses' },
   ]
-  const avg = (days: string[], k: keyof Wellness) => {
+  const fmt = (k: K, v: number) => (k === 'steps' ? Math.round(v).toLocaleString() : v.toFixed(1))
+  const avg = (days: string[], k: K) => {
     const v = days.map((d) => wellness[d]?.[k]).filter((x): x is number => x !== undefined)
     return v.length ? v.reduce((a, b) => a + b, 0) / v.length : undefined
   }
@@ -94,7 +100,7 @@ function Wellbeing() {
             const diff = a !== undefined && p !== undefined ? a - p : undefined
             return (
               <div key={m.k}>
-                <div className="row between"><b>{m.label}</b><span className="small">{a !== undefined ? `${a.toFixed(1)}${m.unit}` : '—'}{diff !== undefined && Math.abs(diff) >= 0.1 && <span className="muted"> {diff > 0 ? '↑' : '↓'}{Math.abs(diff).toFixed(1)}</span>}</span></div>
+                <div className="row between"><b>{m.label}</b><span className="small">{a !== undefined ? `${fmt(m.k, a)}${m.unit}` : '—'}{diff !== undefined && Math.abs(diff) >= (m.k === 'steps' ? 50 : 0.1) && <span className="muted"> {diff > 0 ? '↑' : '↓'}{fmt(m.k, Math.abs(diff))}</span>}</span></div>
                 <div className="spark" style={{ marginTop: 8 }} aria-label={`${m.label} last 30 days`}>
                   {series.map((d) => { const v = wellness[d]?.[m.k]; return <i key={d} className={v === undefined ? 'gap' : ''} title={`${format(fromISO(d), 'MMM d')}: ${v ?? '—'}`} style={v !== undefined ? { height: `${Math.max(6, (Math.min(v, m.max) / m.max) * 100)}%` } : undefined} /> })}
                 </div>
@@ -104,9 +110,10 @@ function Wellbeing() {
         </div>
       </section>
       <section className="card stack" style={{ gap: 14 }}>
-        <h3>Today</h3>
-        <div className="field"><span>Mood</span><div className="scale">{MOODS.map((e, i) => <button key={e} className={today.mood === i + 1 ? 'on' : ''} aria-pressed={today.mood === i + 1} onClick={() => set(t, { mood: i + 1 })}>{e}</button>)}</div></div>
-        <div className="field"><span>Energy</span><div className="scale">{ENERGY.map((e, i) => <button key={e} className={today.energy === i + 1 ? 'on' : ''} aria-pressed={today.energy === i + 1} onClick={() => set(t, { energy: i + 1 })}>{e}</button>)}</div></div>
+        <div className="row between"><h3>Today</h3>{today.fromHealth?.length ? <span className="chip outline">Apple Health</span> : <HealthSyncButton className="btn sm ghost" />}</div>
+        <label className="field"><span>Steps</span><input type="number" min={0} inputMode="numeric" className="input" placeholder="Synced from Health, or type it" value={today.steps ?? ''} onChange={(e) => set(t, { steps: e.target.value === '' ? undefined : Math.round(Number(e.target.value)) })} /></label>
+        <div className="field"><span>Mood</span><div className="scale">{MOODS.map((e, i) => <button key={e} aria-label={`Mood ${MOOD_NAMES[i]}`} className={today.mood === i + 1 ? 'on' : ''} aria-pressed={today.mood === i + 1} onClick={() => set(t, { mood: i + 1 })}>{e}</button>)}</div></div>
+        <div className="field"><span>Energy</span><div className="scale">{ENERGY.map((e, i) => <button key={e} aria-label={`Energy ${MOOD_NAMES[i]}`} className={today.energy === i + 1 ? 'on' : ''} aria-pressed={today.energy === i + 1} onClick={() => set(t, { energy: i + 1 })}>{e}</button>)}</div></div>
         <div className="grid cols-2">
           <label className="field"><span>Sleep (hrs)</span><input type="number" step={0.5} min={0} max={16} className="input" value={today.sleep ?? ''} onChange={(e) => set(t, { sleep: e.target.value === '' ? undefined : Number(e.target.value) })} /></label>
           <div className="field"><span>Water</span>
@@ -129,10 +136,21 @@ function HabitEditor({ h: init, onClose }: { h: Habit; onClose: () => void }) {
     </>}>
       <div className="stack" style={{ gap: 14 }}>
         <input className="input" autoFocus placeholder="e.g. Stretch, Journal, No phone after 11" value={h.name} onChange={(e) => setH({ ...h, name: e.target.value })} />
+        <div className="field"><span>Tick automatically</span>
+          <div className="row wrap">
+            <select className="select" style={{ width: 'auto' }} value={h.auto?.metric ?? ''} aria-label="Health metric"
+              onChange={(e) => setH({ ...h, auto: e.target.value ? { metric: e.target.value as HealthMetric, min: h.auto?.min ?? (e.target.value === 'steps' ? 8000 : 8) } : undefined })}>
+              <option value="">Off — I tick it myself</option><option value="steps">When steps reach…</option><option value="sleep">When sleep reaches…</option><option value="water">When water reaches…</option>
+            </select>
+            {h.auto && <><input type="number" min={0} className="input" style={{ width: 110 }} value={h.auto.min} aria-label="Target" onChange={(e) => setH({ ...h, auto: { ...h.auto!, min: Number(e.target.value) || 0 } })} />
+              <span className="small muted">{h.auto.metric === 'steps' ? 'steps' : h.auto.metric === 'sleep' ? 'hours' : 'glasses'}</span></>}
+          </div>
+          {h.auto?.metric && h.auto.metric !== 'water' && <span className="tiny muted" style={{ fontWeight: 400 }}>Uses data synced from Apple Health (or typed on the Habits page).</span>}
+        </div>
         <div className="field"><span>How often</span>
           <div className="row wrap">{[1, 2, 3, 4, 5, 6, 7].map((n) => <button key={n} className={`chip${h.perWeek === n ? '' : ' outline'}`} onClick={() => setH({ ...h, perWeek: n })}>{n === 7 ? 'Daily' : `${n}×/wk`}</button>)}</div>
         </div>
-        <div className="field"><span>Icon</span><div className="emoji-grid">{EMOJI_PRESETS.map((e) => <button key={e} className={h.emoji === e ? 'on' : ''} onClick={() => setH({ ...h, emoji: e })}>{e}</button>)}</div></div>
+        <div className="field"><span>Icon</span><div className="emoji-grid">{EMOJI_PRESETS.map((e) => <button key={e} aria-label={`Icon ${e}`} aria-pressed={h.emoji === e} className={h.emoji === e ? 'on' : ''} onClick={() => setH({ ...h, emoji: e })}>{e}</button>)}</div></div>
       </div>
     </Modal>
   )

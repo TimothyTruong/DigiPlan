@@ -62,7 +62,7 @@ export default function Calendar() {
         <Seg<View> value={view} onChange={(v) => setSettings({ calendarView: v })} label="View"
           options={[{ value: 'month', label: 'Month' }, { value: 'week', label: 'Week' }, { value: 'list', label: 'List' }]} />
       </div>
-      <div className="row wrap" style={{ marginBottom: 14 }}>
+      <div className="row wrap filter-row" style={{ marginBottom: 14 }}>
         {FILTERS.map((f) => <button key={f.value} className={`chip${filter === f.value ? '' : ' outline'}`} aria-pressed={filter === f.value} onClick={() => setFilter(f.value)}>{f.label}</button>)}
         {filter === 'all' && <button className={`chip${hideClasses ? '' : ' outline'}`} aria-pressed={hideClasses} onClick={() => setHideClasses(!hideClasses)}>Hide classes</button>}
         {courses.length > 0 && (

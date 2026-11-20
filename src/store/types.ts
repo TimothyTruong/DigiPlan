@@ -101,8 +101,15 @@ export interface Habit {
   perWeek: number // 1..7
   log: Record<ISODate, true>
   archived?: boolean
+  /** Tick automatically when a health metric reaches `min` that day (e.g. steps ≥ 8000). */
+  auto?: { metric: HealthMetric; min: number }
 }
-export interface Wellness { mood?: number; energy?: number; sleep?: number; water?: number }
+export type HealthMetric = 'steps' | 'sleep' | 'water'
+export interface Wellness {
+  mood?: number; energy?: number; sleep?: number; water?: number; steps?: number
+  /** Which fields came from Apple Health (vs typed in) */
+  fromHealth?: ('steps' | 'sleep')[]
+}
 
 export interface BudgetCategory { id: string; name: string; emoji: string; planned: number }
 export interface Txn { id: string; date: ISODate; amount: number; categoryId?: string; note?: string; income?: boolean }
@@ -125,5 +132,8 @@ export interface Settings {
   googleCalendars: { id: string; summary: string; color: string; enabled: boolean }[]
   showGoogle: boolean
   calendarView: 'month' | 'week' | 'list'
+  stepGoal: number
+  sleepGoal: number
+  healthLastSync?: number
   onboarded: boolean
 }

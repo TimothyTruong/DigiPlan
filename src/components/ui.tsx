@@ -90,9 +90,9 @@ export function Progress({ value }: { value: number }) {
   return <div className="progress" role="progressbar" aria-valuenow={Math.round(value * 100)}><i style={{ width: `${Math.max(0, Math.min(1, value)) * 100}%` }} /></div>
 }
 
-export function Seg<T extends string>({ value, options, onChange, label }: { value: T; options: { value: T; label: ReactNode }[]; onChange: (v: T) => void; label?: string }) {
+export function Seg<T extends string>({ value, options, onChange, label, className }: { value: T; options: { value: T; label: ReactNode }[]; onChange: (v: T) => void; label?: string; className?: string }) {
   return (
-    <div className="seg" role="radiogroup" aria-label={label}>
+    <div className={`seg${className ? ` ${className}` : ''}`} role="radiogroup" aria-label={label}>
       {options.map((o) => (
         <button key={o.value} role="radio" aria-checked={value === o.value} className={value === o.value ? 'on' : ''} onClick={() => onChange(o.value)}>{o.label}</button>
       ))}
