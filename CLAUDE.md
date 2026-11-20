@@ -36,7 +36,7 @@
 - `src/lib/ics.ts`: .ics timetable import → items (lectures→class, "exam/midterm"→exam with countdown).
 - Theming: each page/class has one accent hex; all tints derive via `color-mix` in CSS (`--accent-soft`, `--accent-ink`).
   Presets in `src/theme/themes.ts`. Covers: `preset:<key>` | blob id | `none`. Icons: emoji | `img:<blobId>`.
-- Pages are lazy-loaded except Today. Keep the main chunk lean (currently ~76 KB gzip).
+- Pages are lazy-loaded except Today. Keep the main chunk lean (currently ~81 KB gzip).
 
 ## Deploy
 - GitHub Pages via `.github/workflows/deploy.yml` (push to main or manual run). Owner setup: Settings → Pages → Source "GitHub Actions".
@@ -51,6 +51,6 @@
   Tests in `src/lib/__tests__/google.test.ts` + `sync.test.ts` stub fetch/GIS — run them after any Google change.
 - Google tokens last ~1h, no silent refresh without a backend; user must press Reconnect. Proper fix = small backend w/ refresh tokens.
 - Google OAuth needs `VITE_GOOGLE_CLIENT_ID` (or entered in Settings) and the deploy origin in Authorized JS origins.
-- Data is per-browser (no sync/accounts yet). Clearing site data wipes it — export backups.
+- Without an account, data is per-browser (clearing site data wipes it). Signed in, everything but files/images syncs via Supabase.
 - `.ics` TZID times are treated as local wall time; UTC (`Z`) times are converted.
 - App name lives only in `src/config.ts`, `index.html` <title>, and the IndexedDB names (`petal-*`) — renaming the DB names loses existing data.
