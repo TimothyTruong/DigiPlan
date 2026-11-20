@@ -1,5 +1,6 @@
 import type { CSSProperties } from 'react'
 import { navigate } from 'wouter/use-browser-location'
+import { ROUTER_BASE } from '../config'
 import type { Entry } from '../lib/agenda'
 import { fmtTime } from '../lib/dates'
 import { useStore } from '../store/store'
@@ -8,7 +9,7 @@ import { openEditor } from './ItemEditor'
 
 export function openEntry(e: Entry) {
   if (e.item) openEditor({ id: e.item.id }, e.date)
-  else if (e.workoutId) navigate(`/fitness?w=${e.workoutId}`)
+  else if (e.workoutId) navigate(`${ROUTER_BASE}/fitness?w=${e.workoutId}`)
   else if (e.google?.htmlLink) window.open(e.google.htmlLink, '_blank', 'noopener')
 }
 

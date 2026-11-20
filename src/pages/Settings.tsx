@@ -174,7 +174,7 @@ function GoogleSection() {
 function HealthSection() {
   const settings = useStore((s) => s.settings)
   const setSettings = useStore((s) => s.setSettings)
-  const link = `${location.origin}/#health=`
+  const link = `${location.origin}${import.meta.env.BASE_URL}#health=`
   const sample = JSON.stringify({ days: [{ date: new Date().toISOString().slice(0, 10), steps: 8432, sleep: 7.4 }] })
   return (
     <section className="card stack" style={{ gap: 12 }}>

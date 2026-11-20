@@ -1,6 +1,6 @@
 import { lazy, Suspense, useEffect, useState, type CSSProperties } from 'react'
 import { Link, Route, Switch, useLocation } from 'wouter'
-import { APP_NAME } from './config'
+import { APP_NAME, asset } from './config'
 import { ItemEditor, openEditor } from './components/ItemEditor'
 import { consumeHealthHash } from './components/Health'
 import { IconView, Toaster } from './components/ui'
@@ -74,7 +74,7 @@ export function App() {
   return (
     <div className="app">
       <nav className="sidebar" aria-label="Main">
-        <div className="brand"><img src="/favicon.svg" alt="" />{APP_NAME}</div>
+        <div className="brand"><img src={asset('favicon.svg')} alt="" />{APP_NAME}</div>
         <button className="side-add" onClick={() => openEditor({})} aria-label="New item" title="New item (N)"><span>+</span><b>New</b><kbd>N</kbd></button>
         <NavLink id="today" /><NavLink id="calendar" /><NavLink id="tasks" /><NavLink id="classes" />
         <div className="nav-label">Life</div>

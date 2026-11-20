@@ -33,7 +33,15 @@
   Presets in `src/theme/themes.ts`. Covers: `preset:<key>` | blob id | `none`. Icons: emoji | `img:<blobId>`.
 - Pages are lazy-loaded except Today. Keep the main chunk lean (currently ~76 KB gzip).
 
+## Deploy
+- GitHub Pages via `.github/workflows/deploy.yml` (push to main or manual run). Owner setup: Settings → Pages → Source "GitHub Actions".
+- `BASE_PATH` sets the sub-path (default `/<repo>/`; repo variable `PAGES_BASE_PATH=/` for a custom domain). Use `asset()` /
+  `ROUTER_BASE` from `src/config.ts` for any absolute URL. `dist/404.html` = index.html so deep links survive refresh.
+- `npm run devices` checks 10 iPhone/iPad sizes; run it after any layout change.
+
 ## Gotchas
+- Apple Health: no web API. iOS Shortcut → clipboard ("Sync from Health") or `#health=` link (Safari only — iOS Home Screen
+  apps have separate storage). Parser in `src/lib/health.ts`. Google Fit web API is being shut down; Health Connect has no web access.
 - Google: `fetchEvents` uses allSettled (one bad calendar doesn't hide the rest); `removePushed` throws on anything but 404/410.
   Tests in `src/lib/__tests__/google.test.ts` + `sync.test.ts` stub fetch/GIS — run them after any Google change.
 - Google tokens last ~1h, no silent refresh without a backend; user must press Reconnect. Proper fix = small backend w/ refresh tokens.
