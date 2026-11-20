@@ -28,6 +28,11 @@
   mid-request, keep `gcal` when Google is unreachable (avoids orphans/duplicates), surface failures in the toast.
 - `src/lib/mealdb.ts`: TheMealDB client (CORS-enabled, no auth; key "1" is dev-only → `VITE_MEALDB_KEY` for production).
   Recipes from it keep `external.id` so re-saving doesn't duplicate. Remote images use the `/small` thumbnail in grids.
+- Accounts/sync (`src/lib/cloud/`, `supabase/`): Supabase Auth (Google + email magic link, PKCE) and one `records` table with
+  RLS (`user_id = auth.uid()`). `records.ts` maps state ↔ rows (pure); `engine.ts` = local-first sync (pull rev>cursor,
+  per-record last-writer-wins via `push_records` RPC, mass-delete guard); `cloud.ts` = auth + triggers; supabase-js is lazy-loaded.
+  Tests run the real migration on PGlite (`__tests__/rls.test.ts`, `engine.test.ts`). Setup steps: `supabase/README.md`.
+  Never ship the service_role key. Sign-out wipes local data + sync meta (meta without data would push deletes).
 - `src/lib/ics.ts`: .ics timetable import → items (lectures→class, "exam/midterm"→exam with countdown).
 - Theming: each page/class has one accent hex; all tints derive via `color-mix` in CSS (`--accent-soft`, `--accent-ink`).
   Presets in `src/theme/themes.ts`. Covers: `preset:<key>` | blob id | `none`. Icons: emoji | `img:<blobId>`.

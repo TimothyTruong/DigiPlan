@@ -89,7 +89,7 @@ const upsert = <T extends { id: string }>(arr: T[], v: T) => {
 
 const defaultPages = () => Object.fromEntries(SECTIONS.map((s) => [s.id, { ...s.style }])) as Record<SectionId, PageStyle>
 
-const emptyState = (): State => ({
+export const emptyState = (): State => ({
   settings: {
     name: '', colorMode: 'system', weekStartsOn: 1, currency: '$', googleCalendars: [], showGoogle: true, stepGoal: 8000, sleepGoal: 8,
     calendarView: 'month', onboarded: false,
@@ -164,6 +164,7 @@ export function demoState(): State {
     { id: uid(), date: t, amount: 7.5, categoryId: out.id, note: 'Bubble tea' },
   ]
   s.settings.onboarded = false
+  s.settings.demo = true
   return s
 }
 
@@ -249,8 +250,8 @@ export const useStore = create<State & Actions>()(
         setCategories: (c) => mut(() => ({ categories: c })),
         upsertTxn: (t) => mut((s) => ({ txns: upsert(s.txns, t) })),
         deleteTxn: (id) => mut((s) => ({ txns: s.txns.filter((t) => t.id !== id) })),
-        replaceAll: (p) => mut(() => ({ ...emptyState(), ...p })),
-        clearAll: () => mut((s) => ({ ...emptyState(), settings: { ...emptyState().settings, ...s.settings, onboarded: true }, pages: s.pages })),
+        replaceAll: (p) => mut(() => ({ ...emptyState(), ...p, settings: { ...emptyState().settings, ...p.settings, demo: false } })),
+        clearAll: () => mut((s) => ({ ...emptyState(), settings: { ...emptyState().settings, ...s.settings, onboarded: true, demo: false }, pages: s.pages })),
       }
     },
     {

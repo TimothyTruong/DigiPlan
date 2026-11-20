@@ -136,4 +136,6 @@ export interface Settings {
   sleepGoal: number
   healthLastSync?: number
   onboarded: boolean
+  /** True while the planner still holds the built-in sample data (cleared by "Clear all" or a restore). */
+  demo?: boolean
 }

@@ -1,8 +1,10 @@
-import { useState, type CSSProperties } from 'react'
+import { useEffect, useState, type CSSProperties } from 'react'
 import { PageShell } from '../components/PageShell'
 import { StylePicker } from '../components/StylePicker'
 import { IconView, Seg, toast } from '../components/ui'
 import { HealthSyncButton, importHealthText } from '../components/Health'
+import { AccountSection } from '../components/Account'
+import { useCloud } from '../lib/cloud/cloud'
 import { clearGoogleCache, connectGoogle, disconnectGoogle, isConnected, listCalendars, useGoogle } from '../lib/google'
 import { icsToItems, parseIcs } from '../lib/ics'
 import { uid } from '../lib/id'
@@ -17,6 +19,7 @@ export default function Settings() {
   const pages = useStore((s) => s.pages)
   const { setSettings, setPage, replaceAll, clearAll, addItems } = useStore.getState()
   const [picker, setPicker] = useState<SectionId | null>(null)
+  useEffect(() => { if (location.hash === '#account') document.getElementById('account')?.scrollIntoView({ block: 'start' }) }, [])
 
   async function importIcs(f?: File) {
     if (!f) return
@@ -52,6 +55,7 @@ export default function Settings() {
   return (
     <PageShell section="settings">
       <div className="stack" style={{ gap: 16, maxWidth: 820 }}>
+        <AccountSection />
         <section className="card stack" style={{ gap: 14 }}>
           <h2>You</h2>
           <div className="grid cols-3">
@@ -100,7 +104,7 @@ export default function Settings() {
           <div className="row wrap">
             <button className="btn" onClick={download}>Download backup</button>
             <label className="btn">Restore backup<input type="file" accept="application/json" className="sr-only" onChange={(e) => { restore(e.target.files?.[0]); e.target.value = '' }} /></label>
-            <button className="btn danger" onClick={() => { if (confirm('Remove all classes, items, recipes, workouts, habits and money entries? Themes are kept.')) { clearAll(); toast('Cleared — fresh start') } }}>Clear all / remove demo data</button>
+            <button className="btn danger" onClick={() => { if (confirm(useCloud.getState().user ? 'Remove all classes, items, recipes, workouts, habits and money entries — from this device AND your account on every device? Themes are kept.' : 'Remove all classes, items, recipes, workouts, habits and money entries? Themes are kept.')) { clearAll(); toast('Cleared — fresh start') } }}>Clear all / remove demo data</button>
           </div>
         </section>
       </div>

@@ -3,6 +3,8 @@ import { Link, Route, Switch, useLocation } from 'wouter'
 import { APP_NAME, asset } from './config'
 import { ItemEditor, openEditor } from './components/ItemEditor'
 import { consumeHealthHash } from './components/Health'
+import { CloudDialogs, SidebarAccount } from './components/Account'
+import { initCloud } from './lib/cloud/cloud'
 import { IconView, Toaster } from './components/ui'
 import { useStore } from './store/store'
 import { SECTIONS } from './theme/themes'
@@ -69,6 +71,7 @@ export function App() {
   const [loc] = useLocation()
   useEffect(() => { window.scrollTo(0, 0) }, [loc])
   useEffect(() => { const id = setTimeout(prefetch, 1500); return () => clearTimeout(id) }, [])
+  useEffect(() => { initCloud() }, [])
   useEffect(() => { consumeHealthHash(); const on = () => consumeHealthHash(); window.addEventListener('hashchange', on); return () => window.removeEventListener('hashchange', on) }, [])
 
   return (
@@ -81,6 +84,7 @@ export function App() {
         <NavLink id="meals" /><NavLink id="fitness" /><NavLink id="habits" /><NavLink id="budget" />
         <div className="nav-sep" />
         <NavLink id="settings" />
+        <SidebarAccount />
         <div className="sidebar-foot">Press <kbd>N</kbd> to add anything · <kbd>1</kbd>–<kbd>8</kbd> to jump</div>
       </nav>
       <main className="main">
@@ -102,6 +106,7 @@ export function App() {
       </main>
       <MobileBar />
       <ItemEditor />
+      <CloudDialogs />
       <Toaster />
     </div>
   )
