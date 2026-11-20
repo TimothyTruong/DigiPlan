@@ -4,7 +4,9 @@
 name: Deploy to GitHub Pages
 on:
   push:
-    branches: [main]
+    # The repo's default branch is currently claude/vibrant-tesla-hui4mo (it was the first branch pushed).
+    # Pages only deploys from the default branch; drop it from this list once main exists and is the default.
+    branches: [main, claude/vibrant-tesla-hui4mo]
   workflow_dispatch:
 permissions:
   contents: read
