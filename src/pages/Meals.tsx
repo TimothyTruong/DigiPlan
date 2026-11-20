@@ -60,7 +60,7 @@ function Stars({ value, onChange, size = 16 }: { value?: number; onChange?: (n?:
   return (
     <span className="row" style={{ gap: 1 }} aria-label={value ? `${value} of 5 stars` : 'Not rated'}>
       {[1, 2, 3, 4, 5].map((n) => onChange
-        ? <button key={n} className="btn ghost" style={{ height: size + 10, padding: '0 2px', fontSize: size, color: n <= (value ?? 0) ? '#E8B04B' : 'var(--faint)' }}
+        ? <button key={n} className="btn ghost star" style={{ height: size + 10, padding: '0 2px', fontSize: size, color: n <= (value ?? 0) ? '#E8B04B' : 'var(--faint)' }}
             aria-label={`${n} star${n > 1 ? 's' : ''}`} onClick={() => onChange(value === n ? undefined : n)}>★</button>
         : <span key={n} style={{ fontSize: size, color: n <= (value ?? 0) ? '#E8B04B' : 'var(--border-strong)' }}>★</span>)}
     </span>

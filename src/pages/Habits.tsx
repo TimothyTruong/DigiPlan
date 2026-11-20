@@ -42,14 +42,14 @@ export default function Habits() {
         </div>
         {!active.length ? <Empty emoji="🌱">Habits can be daily or a few times a week — a rest day never breaks your streak.</Empty> : (
           <div className="hgrid">
-            <div />
+            <div className="hspacer" />
             {days.map((d) => <div key={d} className="tiny muted" style={{ textAlign: 'center' }}>{format(fromISO(d), 'EEEEE')}<br />{format(fromISO(d), 'd')}</div>)}
             <div className="hstat tiny muted">Week · streak</div>
             {active.map((h) => {
               const n = days.filter((d) => h.log[d]).length
               const s = habitStreak(h, t, ws)
               return [
-                <button key={h.id} className="linkish row" style={{ all: 'unset', cursor: 'pointer', display: 'flex', gap: 8, alignItems: 'center' }} onClick={() => setEditing(h)}>
+                <button key={h.id} className="linkish row hname" style={{ all: 'unset', cursor: 'pointer', display: 'flex', gap: 8, alignItems: 'center', minHeight: 36 }} onClick={() => setEditing(h)}>
                   <span style={{ fontSize: 18 }}>{h.emoji}</span>
                   <span className="ellipsis" style={{ fontWeight: 550 }}>{h.name}<span className="tiny muted" style={{ display: 'block', fontWeight: 400 }}>{h.perWeek === 7 ? 'daily' : `${h.perWeek}× a week`}</span></span>
                 </button>,

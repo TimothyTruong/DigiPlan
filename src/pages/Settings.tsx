@@ -75,7 +75,7 @@ export default function Settings() {
             <div key={s.id} className="lrow" style={{ '--accent': pages[s.id].accent } as CSSProperties}>
               <span className="nav-icon" style={{ width: 30, height: 30, borderRadius: 9, display: 'grid', placeItems: 'center', background: 'var(--accent-soft)', overflow: 'hidden' }}><IconView icon={pages[s.id].icon} /></span>
               <span className="grow lrow-title">{s.label}</span>
-              <div className="swatches" style={{ gap: 4 }}>
+              <div className="swatches inline-swatches" style={{ gap: 4 }}>
                 {ACCENTS.slice(0, 9).map((a) => <button key={a.key} className={`swatch${pages[s.id].accent === a.hex ? ' on' : ''}`} style={{ background: a.hex, width: 20, height: 20 }} aria-label={`${s.label} ${a.name}`} onClick={() => setPage(s.id, { accent: a.hex })} />)}
               </div>
               <button className="btn sm" onClick={() => setPicker(s.id)}>Customize</button>

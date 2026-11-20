@@ -155,7 +155,7 @@ function CheckIn() {
       <div className="scale" role="radiogroup" aria-label="Mood">
         {MOODS.map((m, i) => <button key={m} role="radio" aria-checked={w?.mood === i + 1} className={w?.mood === i + 1 ? 'on' : ''} onClick={() => set(t, { mood: i + 1 })}>{m}</button>)}
       </div>
-      <div className="row" style={{ marginTop: 12, gap: 16 }}>
+      <div className="row wrap" style={{ marginTop: 12, gap: 12 }}>
         <label className="row small grow">💧 <input type="number" min={0} max={20} className="input" style={{ width: 64 }} value={w?.water ?? ''} placeholder="0" onChange={(e) => set(t, { water: e.target.value === '' ? undefined : Number(e.target.value) })} /> glasses</label>
         <label className="row small grow">😴 <input type="number" min={0} max={16} step={0.5} className="input" style={{ width: 64 }} value={w?.sleep ?? ''} placeholder="0" onChange={(e) => set(t, { sleep: e.target.value === '' ? undefined : Number(e.target.value) })} /> hrs</label>
       </div>
