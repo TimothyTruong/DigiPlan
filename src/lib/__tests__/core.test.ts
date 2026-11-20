@@ -107,3 +107,14 @@ describe('parseQuickDate', () => {
     expect(parseQuickDate('mayonnaise', T)).toEqual({ title: 'mayonnaise' })
   })
 })
+
+describe('normalizeSupabaseUrl', async () => {
+  const { normalizeSupabaseUrl } = await import('../cloud/client')
+  it('strips copy-paste suffixes', () => {
+    expect(normalizeSupabaseUrl('https://abc.supabase.co/rest/v1/')).toBe('https://abc.supabase.co')
+    expect(normalizeSupabaseUrl(' https://abc.supabase.co/ ')).toBe('https://abc.supabase.co')
+    expect(normalizeSupabaseUrl('https://abc.supabase.co/auth/v1')).toBe('https://abc.supabase.co')
+    expect(normalizeSupabaseUrl('https://abc.supabase.co')).toBe('https://abc.supabase.co')
+    expect(normalizeSupabaseUrl('')).toBeUndefined()
+  })
+})

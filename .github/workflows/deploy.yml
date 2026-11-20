@@ -26,13 +26,18 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm test
-      - name: Report build configuration (presence only, never values)
+      - name: Check build configuration
+        # Values are read from env (not ${{ }} expansion) so the script text in the log shows no values.
+        env:
+          SB_URL: ${{ vars.VITE_SUPABASE_URL }}
+          SB_KEY: ${{ vars.VITE_SUPABASE_ANON_KEY }}
+          G_ID: ${{ vars.VITE_GOOGLE_CLIENT_ID }}
         run: |
-          echo "Supabase URL set:        ${{ vars.VITE_SUPABASE_URL != '' }}"
-          echo "Supabase anon key set:   ${{ vars.VITE_SUPABASE_ANON_KEY != '' }}"
-          echo "Google client ID set:    ${{ vars.VITE_GOOGLE_CLIENT_ID != '' }}"
-          case "${{ vars.VITE_SUPABASE_URL }}" in https://*.supabase.co|"") ;; *) echo "::warning::VITE_SUPABASE_URL should look like https://<project-id>.supabase.co (no /rest/v1)";; esac
-          case "${{ vars.VITE_SUPABASE_ANON_KEY }}" in sb_secret_*) echo "::error::VITE_SUPABASE_ANON_KEY is a SECRET key. Use the sb_publishable_ key."; exit 1;; esac
+          echo "Supabase URL set:      $([ -n "$SB_URL" ] && echo yes || echo no)"
+          echo "Supabase key set:      $([ -n "$SB_KEY" ] && echo yes || echo no)"
+          echo "Google client ID set:  $([ -n "$G_ID" ] && echo yes || echo no)"
+          case "$SB_URL" in https://*.supabase.co|"") ;; *) echo "::warning::VITE_SUPABASE_URL should be just https://<project-id>.supabase.co (the app strips /rest/v1, but please fix the variable)";; esac
+          case "$SB_KEY" in sb_secret_*|*service_role*) echo "::error::VITE_SUPABASE_ANON_KEY is a SECRET key. Use the sb_publishable_ key."; exit 1;; esac
       - run: npm run build
         env:
           BASE_PATH: ${{ vars.PAGES_BASE_PATH || format('/{0}/', github.event.repository.name) }}

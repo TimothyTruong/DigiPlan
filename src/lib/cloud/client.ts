@@ -6,7 +6,9 @@ import type { Rec } from './records'
  * Supabase connection. URL + anon key are public by design (row-level security protects the data); they come
  * from build-time env vars. The service-role key must never appear in this app.
  */
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string | undefined
+/** Accept the base project URL even if pasted with /rest/v1/ or a trailing slash (a common copy-paste slip). */
+export const normalizeSupabaseUrl = (u?: string) => u?.trim().replace(/\/+$/, '').replace(/\/(rest|auth)\/v1$/, '') || undefined
+const SUPABASE_URL = normalizeSupabaseUrl(import.meta.env.VITE_SUPABASE_URL as string | undefined)
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined
 export const cloudConfigured = !!(SUPABASE_URL && SUPABASE_ANON_KEY)
 
