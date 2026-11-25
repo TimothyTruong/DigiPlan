@@ -12,6 +12,7 @@ const LISTS = {
   items: { kind: 'item', ordered: false }, courses: { kind: 'course', ordered: true }, recipes: { kind: 'recipe', ordered: false },
   workouts: { kind: 'workout', ordered: false }, habits: { kind: 'habit', ordered: true }, txns: { kind: 'txn', ordered: false },
   categories: { kind: 'category', ordered: true }, grocery: { kind: 'grocery', ordered: true },
+  accounts: { kind: 'account', ordered: true }, goals: { kind: 'goal', ordered: true },
 } as const satisfies Partial<Record<keyof State, { kind: string; ordered: boolean }>>
 // Objects keyed by date.
 const MAPS = { mealPlan: 'meal', wellness: 'wellness' } as const satisfies Partial<Record<keyof State, string>>

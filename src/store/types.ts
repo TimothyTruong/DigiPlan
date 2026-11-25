@@ -114,6 +114,29 @@ export interface Wellness {
 export interface BudgetCategory { id: string; name: string; emoji: string; planned: number }
 export interface Txn { id: string; date: ISODate; amount: number; categoryId?: string; note?: string; income?: boolean }
 
+export type AccountType = 'chequing' | 'savings' | 'credit' | 'investment' | 'cash'
+/** A bank/card balance the user updates by hand. Credit balances are what's owed (counted negative in net worth). */
+export interface MoneyAccount {
+  id: string
+  name: string
+  emoji: string
+  type: AccountType
+  balance: number
+  history: { date: ISODate; balance: number }[] // one entry per day the balance was updated
+}
+export interface Contribution { id: string; date: ISODate; amount: number; note?: string } // negative = withdrawal
+export interface SavingsGoal {
+  id: string
+  name: string
+  emoji: string
+  target: number
+  targetDate?: ISODate
+  /** If set, progress = that account's balance (e.g. "Emergency fund" = the Savings account); otherwise = contributions. */
+  accountId?: string
+  contributions: Contribution[]
+  done?: boolean
+}
+
 export type SectionId = 'today' | 'calendar' | 'tasks' | 'classes' | 'meals' | 'fitness' | 'habits' | 'budget' | 'settings'
 
 export interface PageStyle {

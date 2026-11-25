@@ -1,25 +1,42 @@
 import { useMemo, useState } from 'react'
 import { addMonths, format } from 'date-fns'
 import { PageShell } from '../components/PageShell'
-import { Empty, Modal, toast } from '../components/ui'
+import { Empty, Modal, Seg, toast } from '../components/ui'
+import { SavingsView, useMoney } from './Savings'
 import { fromISO, toISO, todayISO } from '../lib/dates'
 import { uid } from '../lib/id'
 import { useStore } from '../store/store'
+import { contributedInMonth } from '../lib/money'
 import type { BudgetCategory, Txn } from '../store/types'
 
 export default function Budget() {
+  const [tab, setTab] = useState<'month' | 'savings'>('month')
+  const [editCats, setEditCats] = useState(false)
+  return (
+    <PageShell section="budget" actions={tab === 'month' ? <button className="btn" onClick={() => setEditCats(true)}>Edit categories</button> : undefined}>
+      <div style={{ marginBottom: 16 }}>
+        <Seg value={tab} onChange={setTab} label="Budget view" options={[{ value: 'month', label: '📅 This month' }, { value: 'savings', label: '🐷 Savings & accounts' }]} />
+      </div>
+      {tab === 'month' ? <MonthBudget /> : <SavingsView />}
+      {editCats && <CategoryEditor onClose={() => setEditCats(false)} />}
+    </PageShell>
+  )
+}
+
+function MonthBudget() {
   const t = todayISO()
   const [month, setMonth] = useState(t.slice(0, 7))
   const txns = useStore((s) => s.txns)
   const cats = useStore((s) => s.categories)
   const cur = useStore((s) => s.settings.currency)
   const { upsertTxn, deleteTxn } = useStore.getState()
-  const [editCats, setEditCats] = useState(false)
+  const goals = useStore((s) => s.goals)
   const [amount, setAmount] = useState('')
   const [note, setNote] = useState('')
   const [cat, setCat] = useState<string>(cats[0]?.id ?? '')
   const [income, setIncome] = useState(false)
-  const money = (n: number) => `${n < 0 ? '−' : ''}${cur}${Math.abs(n).toLocaleString(undefined, { minimumFractionDigits: n % 1 ? 2 : 0, maximumFractionDigits: 2 })}`
+  const money = useMoney()
+  const toGoals = contributedInMonth(goals, month)
 
   const mt = useMemo(() => txns.filter((x) => x.date.startsWith(month)).sort((a, b) => (a.date > b.date ? -1 : 1)), [txns, month])
   const inc = mt.filter((x) => x.income).reduce((n, x) => n + x.amount, 0)
@@ -37,7 +54,7 @@ export default function Budget() {
   const step = (n: number) => setMonth(toISO(addMonths(fromISO(`${month}-01`), n)).slice(0, 7))
 
   return (
-    <PageShell section="budget" actions={<button className="btn" onClick={() => setEditCats(true)}>Edit categories</button>}>
+    <>
       <div className="cal-toolbar">
         <button className="btn icon" onClick={() => step(-1)} aria-label="Previous month">‹</button>
         <button className="btn icon" onClick={() => step(1)} aria-label="Next month">›</button>
@@ -46,7 +63,7 @@ export default function Budget() {
       <div className="grid cols-3" style={{ marginBottom: 16 }}>
         <div className="stat"><div className="l">Income</div><div className="v">{money(inc)}</div></div>
         <div className="stat"><div className="l">Spent</div><div className="v">{money(spent)}</div><div className="small muted">of {money(planned)} planned</div></div>
-        <div className="stat" style={{ background: 'var(--accent-soft)' }}><div className="l">Left</div><div className="v">{money(inc - spent)}</div></div>
+        <div className="stat" style={{ background: 'var(--accent-soft)' }}><div className="l">Left</div><div className="v">{money(inc - spent)}</div>{toGoals !== 0 && <div className="small muted">{money(toGoals)} put toward goals</div>}</div>
       </div>
       <div className="grid dash">
         <section className="card">
@@ -83,8 +100,7 @@ export default function Budget() {
           </div>
         </section>
       </div>
-      {editCats && <CategoryEditor onClose={() => setEditCats(false)} />}
-    </PageShell>
+    </>
   )
 }
 

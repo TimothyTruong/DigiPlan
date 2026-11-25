@@ -6,7 +6,7 @@ import { addDaysISO, todayISO } from '../lib/dates'
 import { SECTIONS } from '../theme/themes'
 import type { HealthDay } from '../lib/health'
 import type {
-  BudgetCategory, Course, GroceryItem, Habit, ISODate, Item, MealEntry, MealSlot, PageStyle, Recipe,
+  BudgetCategory, MoneyAccount, SavingsGoal, Course, GroceryItem, Habit, ISODate, Item, MealEntry, MealSlot, PageStyle, Recipe,
   SectionId, Settings, Txn, Wellness, Workout,
 } from './types'
 
@@ -35,6 +35,8 @@ export interface State {
   wellness: Record<ISODate, Wellness>
   categories: BudgetCategory[]
   txns: Txn[]
+  accounts: MoneyAccount[]
+  goals: SavingsGoal[]
 }
 
 interface Actions {
@@ -62,6 +64,10 @@ interface Actions {
   setCategories: (c: BudgetCategory[]) => void
   upsertTxn: (t: Txn) => void
   deleteTxn: (id: string) => void
+  upsertAccount: (a: MoneyAccount) => void
+  deleteAccount: (id: string) => void
+  upsertGoal: (g: SavingsGoal) => void
+  deleteGoal: (id: string) => void
   replaceAll: (s: Partial<State>) => void
   clearAll: () => void
 }
@@ -79,6 +85,13 @@ export function autoTick(habits: Habit[], wellness: Record<ISODate, Wellness>, d
     return log === h.log ? h : { ...h, log }
   })
   return changed ? out : habits
+}
+
+/** Combine saved data with defaults. Collections added after a user's data was first saved start empty, never as demo content. */
+export function mergePersisted<T extends State>(persisted: unknown, current: T): T {
+  const p = (persisted ?? {}) as Partial<State>
+  const added = Object.keys(p).length ? { accounts: p.accounts ?? [], goals: p.goals ?? [] } : {}
+  return { ...current, ...p, ...added, settings: { ...current.settings, ...p.settings }, pages: { ...defaultPages(), ...p.pages } }
 }
 
 const upsert = <T extends { id: string }>(arr: T[], v: T) => {
@@ -105,6 +118,8 @@ export const emptyState = (): State => ({
     { id: uid(), name: 'Fun', emoji: '🎟️', planned: 70 },
   ],
   txns: [],
+  accounts: [],
+  goals: [],
 })
 
 /** Demo content relative to today so a first visit doesn't look empty. Removable in Settings. */
@@ -162,6 +177,15 @@ export function demoState(): State {
     { id: uid(), date: `${mo}01`, amount: 800, categoryId: rent.id, note: 'Rent' },
     { id: uid(), date: d(-3) > `${mo}01` ? d(-3) : `${mo}01`, amount: 64.2, categoryId: groc.id, note: 'Weekly shop' },
     { id: uid(), date: t, amount: 7.5, categoryId: out.id, note: 'Bubble tea' },
+  ]
+  const chq: MoneyAccount = { id: uid(), name: 'Chequing', emoji: '🏦', type: 'chequing', balance: 1240.55, history: [{ date: d(-30), balance: 980 }, { date: d(-14), balance: 1510 }, { date: t, balance: 1240.55 }] }
+  const sav: MoneyAccount = { id: uid(), name: 'Savings', emoji: '🐷', type: 'savings', balance: 3200, history: [{ date: d(-60), balance: 2600 }, { date: d(-30), balance: 2900 }, { date: t, balance: 3200 }] }
+  const card: MoneyAccount = { id: uid(), name: 'Student card', emoji: '💳', type: 'credit', balance: 186.4, history: [{ date: t, balance: 186.4 }] }
+  s.accounts = [chq, sav, card]
+  s.goals = [
+    { id: uid(), name: 'Emergency fund', emoji: '🛟', target: 5000, accountId: sav.id, contributions: [] },
+    { id: uid(), name: 'Reading week trip', emoji: '✈️', target: 900, targetDate: d(95), contributions: [{ id: uid(), date: d(-40), amount: 150 }, { id: uid(), date: d(-10), amount: 120 }] },
+    { id: uid(), name: 'New laptop', emoji: '💻', target: 1400, targetDate: d(200), contributions: [{ id: uid(), date: d(-5), amount: 100 }] },
   ]
   s.settings.onboarded = false
   s.settings.demo = true
@@ -250,6 +274,13 @@ export const useStore = create<State & Actions>()(
         setCategories: (c) => mut(() => ({ categories: c })),
         upsertTxn: (t) => mut((s) => ({ txns: upsert(s.txns, t) })),
         deleteTxn: (id) => mut((s) => ({ txns: s.txns.filter((t) => t.id !== id) })),
+        upsertAccount: (a) => mut((s) => ({ accounts: upsert(s.accounts, a) })),
+        deleteAccount: (id) => mut((s) => ({
+          accounts: s.accounts.filter((a) => a.id !== id),
+          goals: s.goals.map((g) => (g.accountId === id ? { ...g, accountId: undefined } : g)),
+        })),
+        upsertGoal: (g) => mut((s) => ({ goals: upsert(s.goals, g) })),
+        deleteGoal: (id) => mut((s) => ({ goals: s.goals.filter((g) => g.id !== id) })),
         replaceAll: (p) => mut(() => ({ ...emptyState(), ...p, settings: { ...emptyState().settings, ...p.settings, demo: false } })),
         clearAll: () => mut((s) => ({ ...emptyState(), settings: { ...emptyState().settings, ...s.settings, onboarded: true, demo: false }, pages: s.pages })),
       }
@@ -259,19 +290,16 @@ export const useStore = create<State & Actions>()(
       version: 1,
       storage: createJSONStorage(() => idbStorage),
       partialize: (s) => {
-        const { settings, pages, items, courses, recipes, mealPlan, grocery, workouts, habits, wellness, categories, txns } = s
-        return { settings, pages, items, courses, recipes, mealPlan, grocery, workouts, habits, wellness, categories, txns }
+        const { settings, pages, items, courses, recipes, mealPlan, grocery, workouts, habits, wellness, categories, txns, accounts, goals } = s
+        return { settings, pages, items, courses, recipes, mealPlan, grocery, workouts, habits, wellness, categories, txns, accounts, goals }
       },
-      merge: (persisted, current) => {
-        const p = (persisted ?? {}) as Partial<State>
-        return { ...current, ...p, settings: { ...current.settings, ...p.settings }, pages: { ...defaultPages(), ...p.pages } }
-      },
+      merge: (persisted, current) => mergePersisted(persisted, current),
     },
   ),
 )
 
 export const exportData = (): State => {
   const s = useStore.getState()
-  const { settings, pages, items, courses, recipes, mealPlan, grocery, workouts, habits, wellness, categories, txns } = s
-  return { settings, pages, items, courses, recipes, mealPlan, grocery, workouts, habits, wellness, categories, txns }
+  const { settings, pages, items, courses, recipes, mealPlan, grocery, workouts, habits, wellness, categories, txns, accounts, goals } = s
+  return { settings, pages, items, courses, recipes, mealPlan, grocery, workouts, habits, wellness, categories, txns, accounts, goals }
 }

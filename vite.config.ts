@@ -33,5 +33,6 @@ export default defineConfig({
   base: env.BASE_PATH || '/',
   plugins: [react(), csp()],
   build: { target: 'es2022', cssMinify: true },
-  test: { environment: 'node' },
+  // .claude/worktrees holds agent working copies; never run their tests as ours
+  test: { environment: 'node', exclude: ['**/node_modules/**', '**/dist/**', '.claude/**'] },
 } as any)

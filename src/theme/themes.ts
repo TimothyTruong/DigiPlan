@@ -40,7 +40,7 @@ export const SECTIONS: SectionDef[] = [
   { id: 'meals', label: 'Recipes', path: '/meals', blurb: 'Your recipe base, fresh ideas, the week’s meals and groceries.', style: { accent: '#F2B48C', banner: 'preset:sunset', icon: '🥗' } },
   { id: 'fitness', label: 'Fitness', path: '/fitness', blurb: 'Plan workouts, log sets, keep moving.', style: { accent: '#8ED3C2', banner: 'preset:seaglass', icon: '🏃‍♀️' } },
   { id: 'habits', label: 'Habits & Wellness', path: '/habits', blurb: 'Gentle streaks and how you’re feeling.', style: { accent: '#9CC19F', banner: 'preset:matcha', icon: '🌿' } },
-  { id: 'budget', label: 'Budget', path: '/budget', blurb: 'Planned vs. actual, month by month.', style: { accent: '#9CC3E8', banner: 'preset:sky', icon: '💸' } },
+  { id: 'budget', label: 'Budget', path: '/budget', blurb: 'Monthly spending, savings goals and account balances.', style: { accent: '#9CC3E8', banner: 'preset:sky', icon: '💸' } },
   { id: 'settings', label: 'Settings', path: '/settings', blurb: 'Themes, calendars and your data.', style: { accent: '#BBB2A8', banner: 'none', icon: '⚙️' } },
 ]
 

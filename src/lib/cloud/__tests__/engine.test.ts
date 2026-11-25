@@ -120,6 +120,8 @@ describe('sync engine (two devices, real Postgres + RLS)', () => {
     expect(b.state.categories.map((c) => c.name)).toEqual(a.state.categories.map((c) => c.name))
     expect(Object.keys(b.state.wellness).sort()).toEqual(Object.keys(a.state.wellness).sort())
     expect(b.state.mealPlan).toEqual(a.state.mealPlan)
+    expect(b.state.accounts.map((x) => [x.name, x.balance, x.history.length])).toEqual(a.state.accounts.map((x) => [x.name, x.balance, x.history.length]))
+    expect(b.state.goals).toEqual(a.state.goals)
     expect(b.state.settings.name).toBe('Tim')
     expect(b.state.settings.healthLastSync).toBeUndefined()
     expect(b.state.settings.demo).toBeUndefined()
