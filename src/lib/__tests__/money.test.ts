@@ -73,3 +73,27 @@ describe('loading saved data from before accounts existed', async () => {
     expect(mergePersisted({ accounts }, demo).accounts).toEqual(accounts)
   })
 })
+
+describe('savingsSplit', async () => {
+  const { savingsSplit, setToAmount } = await import('../money')
+  const sav = acct({ id: 's', type: 'savings', balance: 1500 })
+  const chq = acct({ id: 'c', type: 'chequing', balance: 900 })
+  const travel = goal({ id: 't', name: 'Travel', target: 300, contributions: [{ id: '1', date: T, amount: 300 }] })
+  const emerg = goal({ id: 'e', name: 'Emergency', target: 1000, contributions: [{ id: '1', date: T, amount: 700 }] })
+  it('splits savings into named goals with totals and unassigned money', () => {
+    const s = savingsSplit([travel, emerg, goal({ id: 'd', done: true, contributions: [{ id: '1', date: T, amount: 50 }] })], [sav, chq])
+    expect(s).toMatchObject({ pool: 1500, totalSaved: 1000, totalTarget: 1300, unassigned: 500 })
+    expect(s.segments.map((x) => [x.name, x.saved])).toEqual([['Travel', 300], ['Emergency', 700]]) // completed goals excluded
+    expect(s.pct).toBeCloseTo(1000 / 1300)
+  })
+  it('flags over-assignment; no savings accounts → pool 0', () => {
+    expect(savingsSplit([travel, emerg], [acct({ id: 's', type: 'savings', balance: 600 })]).unassigned).toBe(-400)
+    expect(savingsSplit([travel], []).pool).toBe(0)
+    expect(savingsSplit([], []).pct).toBe(0)
+  })
+  it('setToAmount adds the difference, or nothing', () => {
+    expect(setToAmount(emerg, 900, T, 'x')).toEqual({ id: 'x', date: T, amount: 200, note: 'Adjusted total' })
+    expect(setToAmount(emerg, 650.5, T, 'x')!.amount).toBe(-49.5)
+    expect(setToAmount(emerg, 700, T, 'x')).toBeUndefined()
+  })
+})

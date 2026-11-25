@@ -181,12 +181,12 @@ export function demoState(): State {
     { id: uid(), date: t, amount: 7.5, categoryId: out.id, note: 'Bubble tea' },
   ]
   const chq: MoneyAccount = { id: uid(), name: 'Chequing', emoji: '🏦', type: 'chequing', balance: 1240.55, history: [{ date: d(-30), balance: 980 }, { date: d(-14), balance: 1510 }, { date: t, balance: 1240.55 }] }
-  const sav: MoneyAccount = { id: uid(), name: 'Savings', emoji: '🐷', type: 'savings', balance: 3200, history: [{ date: d(-60), balance: 2600 }, { date: d(-30), balance: 2900 }, { date: t, balance: 3200 }] }
+  const sav: MoneyAccount = { id: uid(), name: 'Savings', emoji: '🐷', type: 'savings', balance: 1500, history: [{ date: d(-60), balance: 1100 }, { date: d(-30), balance: 1300 }, { date: t, balance: 1500 }] }
   const card: MoneyAccount = { id: uid(), name: 'Student card', emoji: '💳', type: 'credit', balance: 186.4, history: [{ date: t, balance: 186.4 }] }
   s.accounts = [chq, sav, card]
   s.goals = [
-    { id: uid(), name: 'Emergency fund', emoji: '🛟', target: 5000, accountId: sav.id, contributions: [] },
-    { id: uid(), name: 'Reading week trip', emoji: '✈️', target: 900, targetDate: d(95), contributions: [{ id: uid(), date: d(-40), amount: 150 }, { id: uid(), date: d(-10), amount: 120 }] },
+    { id: uid(), name: 'Emergency', emoji: '🛟', target: 1000, contributions: [{ id: uid(), date: d(-60), amount: 500 }, { id: uid(), date: d(-20), amount: 200 }] },
+    { id: uid(), name: 'Travel', emoji: '✈️', target: 300, targetDate: d(95), contributions: [{ id: uid(), date: d(-40), amount: 150 }, { id: uid(), date: d(-10), amount: 150 }] },
     { id: uid(), name: 'New laptop', emoji: '💻', target: 1400, targetDate: d(200), contributions: [{ id: uid(), date: d(-5), amount: 100 }] },
   ]
   s.settings.onboarded = false

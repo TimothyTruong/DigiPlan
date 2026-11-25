@@ -3,7 +3,7 @@ import { format, formatDistanceToNowStrict } from 'date-fns'
 import { Empty, Modal, Progress, Seg, toast, useMediaQuery } from '../components/ui'
 import { fromISO, todayISO } from '../lib/dates'
 import { uid } from '../lib/id'
-import { goalStatus, signedBalance, totals, withBalance } from '../lib/money'
+import { goalStatus, savingsSplit, setToAmount, signedBalance, totals, withBalance } from '../lib/money'
 import { useStore } from '../store/store'
 import type { AccountType, Contribution, MoneyAccount, SavingsGoal } from '../store/types'
 
@@ -40,6 +40,9 @@ export function SavingsView() {
         <div className="stat"><div className="l">{tot.owed ? 'Owed on cards' : 'Toward goals'}</div><div className="v">{money(tot.owed ? -tot.owed : towardGoals)}</div><div className="small muted">{tot.owed ? `${money(towardGoals)} saved toward goals` : `${active.length} active goal${active.length === 1 ? '' : 's'}`}</div></div>
       </div>
 
+      <SplitCard onNew={(p) => setEditGoal({ id: uid(), name: '', emoji: '🎯', target: 0, contributions: [], ...p })}
+        onOpen={(g) => (g.accountId ? setEditGoal(g) : setContribute(g))} />
+
       <section className="card">
         <div className="card-head"><h3>🏦 Accounts</h3><button className="btn sm" onClick={() => setEditAccount({ id: uid(), name: '', emoji: '🏦', type: 'chequing', balance: 0, history: [] })}>+ Account</button></div>
         {!accounts.length && <Empty emoji="🏦">Add your chequing, savings or credit card and update the balance whenever you check your bank app. Nothing connects to your bank.</Empty>}
@@ -47,7 +50,7 @@ export function SavingsView() {
       </section>
 
       <section className="card">
-        <div className="card-head"><h3>🎯 Savings goals</h3><button className="btn sm" onClick={() => setEditGoal({ id: uid(), name: '', emoji: '🎯', target: 1000, contributions: [] })}>+ Goal</button></div>
+        <div className="card-head"><h3>🎯 Goal details</h3><button className="btn sm" onClick={() => setEditGoal({ id: uid(), name: '', emoji: '🎯', target: 0, contributions: [] })}>+ Goal</button></div>
         {!active.length && <Empty emoji="🌱">Set a goal (emergency fund, trip, laptop) and track it by hand or let it follow a savings account.</Empty>}
         <div className="grid cols-2">
           {active.map((g) => <GoalCard key={g.id} g={g} onEdit={() => setEditGoal(g)} onAdd={() => setContribute(g)} />)}
@@ -59,6 +62,74 @@ export function SavingsView() {
       {editGoal && <GoalEditor g={editGoal} onClose={() => setEditGoal(null)} />}
       {contribute && <ContributeModal g={contribute} onClose={() => setContribute(null)} />}
     </div>
+  )
+}
+
+const SPLIT_COLORS = ['#E9A3B4', '#9CC3E8', '#9CC19F', '#E8C872', '#BCA7E4', '#F2B48C', '#8ED3C2', '#CFA3C0']
+export const GOAL_PRESETS: { name: string; emoji: string }[] = [
+  { name: 'Emergency', emoji: '🛟' }, { name: 'Travel', emoji: '✈️' }, { name: 'Laptop', emoji: '💻' }, { name: 'Tuition', emoji: '📚' },
+  { name: 'Car', emoji: '🚗' }, { name: 'Gifts', emoji: '🎁' }, { name: 'Moving out', emoji: '📦' }, { name: 'Concerts', emoji: '🎟️' },
+]
+
+/** Overview: savings split into named pots (one bar), total saved vs total targets, and money not assigned to any goal. */
+function SplitCard({ onNew, onOpen }: { onNew: (p: Partial<SavingsGoal>) => void; onOpen: (g: SavingsGoal) => void }) {
+  const goals = useStore((s) => s.goals)
+  const accounts = useStore((s) => s.accounts)
+  const money = useMoney()
+  const split = useMemo(() => savingsSplit(goals, accounts), [goals, accounts])
+  const scale = Math.max(split.pool, split.totalSaved, 1)
+  const free = split.pool > 0 ? Math.max(0, split.unassigned) : 0
+  const used = goals.filter((g) => !g.done).map((g) => g.name.toLowerCase())
+  const presets = GOAL_PRESETS.filter((p) => !used.some((u) => u.includes(p.name.toLowerCase())))
+  return (
+    <section className="card">
+      <div className="card-head"><h3>🐷 Savings split</h3><button className="btn sm" onClick={() => onNew({})}>+ Goal</button></div>
+      {!split.segments.length ? (
+        <div className="stack" style={{ gap: 10 }}>
+          <div className="small muted">Split your savings into named pots, like $300 for travel and $700 for emergencies. Pick one to start:</div>
+          <div className="row wrap">{GOAL_PRESETS.map((p) => <button key={p.name} className="chip outline" onClick={() => onNew(p)}>{p.emoji} {p.name}</button>)}</div>
+        </div>
+      ) : (
+        <div className="stack" style={{ gap: 14 }}>
+          <div className="row between wrap" style={{ alignItems: 'baseline' }}>
+            <div><span className="v" style={{ font: '560 1.6rem var(--font-display)' }}>{money(split.totalSaved)}</span> <span className="small muted">saved of {money(split.totalTarget)} across {split.segments.length} goal{split.segments.length === 1 ? '' : 's'}</span></div>
+            <span className="small muted">{Math.round(split.pct * 100)}% of all targets</span>
+          </div>
+          <div style={{ display: 'flex', height: 18, borderRadius: 99, overflow: 'hidden', background: 'var(--surface-2)' }} role="img"
+            aria-label={`Savings split: ${split.segments.map((s) => `${s.name} ${money(s.saved)}`).join(', ')}${free ? `, unassigned ${money(free)}` : ''}`}>
+            {split.segments.map((s, i) => s.saved > 0 && <div key={s.id} title={`${s.name}: ${money(s.saved)}`} style={{ width: `${(s.saved / scale) * 100}%`, background: SPLIT_COLORS[i % SPLIT_COLORS.length], borderRight: '2px solid var(--surface)' }} />)}
+            {free > 0 && <div title={`Unassigned: ${money(free)}`} style={{ width: `${(free / scale) * 100}%`, background: 'repeating-linear-gradient(135deg, var(--border) 0 6px, transparent 6px 12px)' }} />}
+          </div>
+          <div className="stack" style={{ gap: 2 }}>
+            {split.segments.map((s, i) => {
+              const g = goals.find((x) => x.id === s.id)!
+              return (
+                <button key={s.id} className="lrow" style={{ border: 0, background: 'none', cursor: 'pointer', textAlign: 'left', width: '100%' }} onClick={() => onOpen(g)} aria-label={`${s.name}: ${money(s.saved)} of ${money(s.target)}`}>
+                  <span style={{ width: 12, height: 12, borderRadius: 4, background: SPLIT_COLORS[i % SPLIT_COLORS.length], flex: 'none' }} />
+                  <span className="grow lrow-title ellipsis">{s.emoji} {s.name}</span>
+                  <span className="small" style={{ flex: 'none' }}><b>{money(s.saved)}</b> <span className="muted">/ {money(s.target)}</span></span>
+                  <span className="small muted" style={{ width: 40, textAlign: 'right', flex: 'none' }}>{s.target > 0 ? `${Math.min(100, Math.round((s.saved / s.target) * 100))}%` : ''}</span>
+                </button>
+              )
+            })}
+            {free > 0 && (
+              <div className="lrow">
+                <span style={{ width: 12, height: 12, borderRadius: 4, flex: 'none', background: 'repeating-linear-gradient(135deg, var(--border-strong) 0 3px, transparent 3px 6px)' }} />
+                <span className="grow muted">Not assigned to a goal</span>
+                <span className="small" style={{ flex: 'none' }}><b>{money(free)}</b></span>
+                <span style={{ width: 40, flex: 'none' }} />
+              </div>
+            )}
+          </div>
+          {split.pool > 0
+            ? split.unassigned < 0
+              ? <div className="small" style={{ color: 'var(--danger)' }}>Your goals add up to {money(-split.unassigned)} more than your savings accounts hold ({money(split.pool)}). Update a balance or lower a goal.</div>
+              : <div className="small muted">Your savings accounts hold {money(split.pool)}{free > 0 ? ` — ${money(free)} isn’t assigned yet` : ' — all of it is assigned'}.</div>
+            : <div className="small muted">Add a savings account below to see how much of it is still unassigned.</div>}
+          {presets.length > 0 && <div className="row wrap"><span className="tiny muted">Add:</span>{presets.slice(0, 5).map((p) => <button key={p.name} className="chip outline" onClick={() => onNew(p)}>{p.emoji} {p.name}</button>)}</div>}
+        </div>
+      )}
+    </section>
   )
 }
 
@@ -172,12 +243,14 @@ function GoalEditor({ g: init, onClose }: { g: SavingsGoal; onClose: () => void 
   const { upsertGoal, deleteGoal } = useStore.getState()
   const [g, setG] = useState(init)
   const [mode, setMode] = useState<'manual' | 'account'>(init.accountId ? 'account' : 'manual')
+  const [already, setAlready] = useState('')
   const savingsAccounts = accounts.filter((a) => a.type !== 'credit')
   function save() {
     if (!g.name.trim()) { toast('Give the goal a name'); return }
     if (!(g.target > 0)) { toast('Set a target amount'); return }
     if (mode === 'account' && !g.accountId) { toast('Pick the account this goal follows'); return }
-    upsertGoal({ ...g, name: g.name.trim(), accountId: mode === 'account' ? g.accountId : undefined })
+    const start = !exists && mode === 'manual' && Number(already) > 0 ? [{ id: uid(), date: todayISO(), amount: Number(already), note: 'Starting amount' }] : []
+    upsertGoal({ ...g, name: g.name.trim(), accountId: mode === 'account' ? g.accountId : undefined, contributions: [...g.contributions, ...start] })
     onClose()
   }
   return (
@@ -191,10 +264,11 @@ function GoalEditor({ g: init, onClose }: { g: SavingsGoal; onClose: () => void 
       <div className="stack" style={{ gap: 14 }}>
         <div className="row">
           <input className="input" style={{ width: 56, textAlign: 'center', fontSize: 22 }} value={g.emoji} maxLength={4} onChange={(e) => setG({ ...g, emoji: e.target.value })} aria-label="Emoji" />
-          <input className="input grow" autoFocus placeholder="e.g. Emergency fund, Summer trip" value={g.name} onChange={(e) => setG({ ...g, name: e.target.value })} aria-label="Goal name" />
+          <input className="input grow" autoFocus={!g.name} placeholder="e.g. Emergency fund, Summer trip" value={g.name} onChange={(e) => setG({ ...g, name: e.target.value })} aria-label="Goal name" />
         </div>
+        {!exists && !g.name && <div className="row wrap">{GOAL_PRESETS.map((p) => <button key={p.name} className="chip outline" onClick={() => setG({ ...g, ...p })}>{p.emoji} {p.name}</button>)}</div>}
         <div className="grid cols-2">
-          <label className="field"><span>Target amount</span><input className="input" type="number" inputMode="decimal" min={0} value={g.target || ''} onChange={(e) => setG({ ...g, target: Number(e.target.value) || 0 })} /></label>
+          <label className="field"><span>Target amount</span><input className="input" type="number" inputMode="decimal" min={0} autoFocus={!!g.name && !exists} placeholder="e.g. 300" value={g.target || ''} onChange={(e) => setG({ ...g, target: Number(e.target.value) || 0 })} /></label>
           <label className="field"><span>Target date (optional)</span><input className="input" type="date" value={g.targetDate ?? ''} onChange={(e) => setG({ ...g, targetDate: e.target.value || undefined })} /></label>
         </div>
         <div className="field"><span>Track progress</span>
@@ -207,6 +281,7 @@ function GoalEditor({ g: init, onClose }: { g: SavingsGoal; onClose: () => void 
             </select>
           : <div className="small muted">Add a savings account first (Accounts → + Account).</div>)}
         {mode === 'account' && <div className="tiny muted">Progress = that account’s balance, so updating the balance updates the goal.</div>}
+        {mode === 'manual' && !exists && <label className="field"><span>Already saved for this (optional)</span><input className="input" type="number" inputMode="decimal" min={0} placeholder="0" value={already} onChange={(e) => setAlready(e.target.value)} /></label>}
       </div>
     </Modal>
   )
@@ -216,12 +291,20 @@ function ContributeModal({ g: init, onClose }: { g: SavingsGoal; onClose: () => 
   const g = useStore((s) => s.goals.find((x) => x.id === init.id)) ?? init
   const upsertGoal = useStore((s) => s.upsertGoal)
   const money = useMoney()
-  const [dir, setDir] = useState<'in' | 'out'>('in')
+  const [dir, setDir] = useState<'in' | 'out' | 'set'>('in')
   const [amount, setAmount] = useState('')
   const [date, setDate] = useState(todayISO())
   const [note, setNote] = useState('')
   function add() {
     const n = Number(amount)
+    if (dir === 'set') {
+      if (amount.trim() === '' || !(n >= 0)) { toast('Enter the total you have for this goal'); return }
+      const c = setToAmount(g, n, date, uid())
+      if (c) upsertGoal({ ...g, contributions: [...g.contributions, { ...c, note: note.trim() || c.note }] })
+      setAmount(''); setNote('')
+      toast(`${g.name} is now ${money(n)}`)
+      return
+    }
     if (!(n > 0)) { toast('Enter an amount'); return }
     const c: Contribution = { id: uid(), date, amount: dir === 'in' ? n : -n, note: note.trim() || undefined }
     upsertGoal({ ...g, contributions: [...g.contributions, c] })
@@ -232,9 +315,10 @@ function ContributeModal({ g: init, onClose }: { g: SavingsGoal; onClose: () => 
   return (
     <Modal open onClose={onClose} title={`${g.emoji} ${g.name}`} footer={<><span /><button className="btn primary" onClick={onClose}>Done</button></>}>
       <div className="stack" style={{ gap: 14 }}>
-        <Seg value={dir} onChange={setDir} options={[{ value: 'in', label: '＋ Put money in' }, { value: 'out', label: '− Take money out' }]} />
+        <div className="small muted">Saved so far: <b>{money(g.contributions.reduce((n, c) => n + c.amount, 0))}</b> of {money(g.target)}</div>
+        <Seg value={dir} onChange={setDir} options={[{ value: 'in', label: '＋ Put in' }, { value: 'out', label: '− Take out' }, { value: 'set', label: '= Set total' }]} />
         <div className="grid cols-2">
-          <label className="field"><span>Amount</span><input className="input" type="number" inputMode="decimal" min={0} step="0.01" autoFocus value={amount} onChange={(e) => setAmount(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && add()} /></label>
+          <label className="field"><span>{dir === 'set' ? 'Total saved for this goal' : 'Amount'}</span><input className="input" type="number" inputMode="decimal" min={0} step="0.01" autoFocus value={amount} onChange={(e) => setAmount(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && add()} /></label>
           <label className="field"><span>Date</span><input className="input" type="date" value={date} onChange={(e) => e.target.value && setDate(e.target.value)} /></label>
         </div>
         <div className="row"><input className="input grow" placeholder="Note (optional)" value={note} onChange={(e) => setNote(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && add()} aria-label="Note" /><button className="btn primary" onClick={add}>Add</button></div>

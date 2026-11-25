@@ -1,5 +1,5 @@
 import { differenceInCalendarMonths } from 'date-fns'
-import type { ISODate, MoneyAccount, SavingsGoal } from '../store/types'
+import type { Contribution, ISODate, MoneyAccount, SavingsGoal } from '../store/types'
 import { fromISO, todayISO } from './dates'
 
 /** Pure money helpers for the Budget → Savings tab (unit-tested). */
@@ -51,3 +51,31 @@ export function withBalance(a: MoneyAccount, balance: number, date: ISODate = to
 }
 
 const round = (n: number) => Math.round(n * 100) / 100
+
+export interface SplitSegment { id: string; name: string; emoji: string; saved: number; target: number }
+export interface SavingsSplit {
+  /** Money in savings-type accounts (0 if the user hasn't added any). */
+  pool: number
+  totalSaved: number
+  totalTarget: number
+  /** pool − saved toward goals; negative = more assigned to goals than the savings accounts hold. */
+  unassigned: number
+  pct: number
+  segments: SplitSegment[]
+}
+
+/** How savings are split across named goals ("$300 travel, $700 emergency…") plus the total. */
+export function savingsSplit(goals: SavingsGoal[], accounts: MoneyAccount[]): SavingsSplit {
+  const active = goals.filter((g) => !g.done)
+  const segments = active.map((g) => ({ id: g.id, name: g.name, emoji: g.emoji, saved: goalSaved(g, accounts), target: g.target }))
+  const totalSaved = round(segments.reduce((n, s) => n + Math.max(0, s.saved), 0))
+  const totalTarget = round(segments.reduce((n, s) => n + s.target, 0))
+  const pool = round(accounts.filter((a) => a.type === 'savings').reduce((n, a) => n + a.balance, 0))
+  return { pool, totalSaved, totalTarget, unassigned: round(pool - totalSaved), pct: totalTarget > 0 ? Math.min(1, totalSaved / totalTarget) : 0, segments }
+}
+
+/** Contribution that moves a manual goal to exactly `amount` (keeps the history honest). */
+export function setToAmount(g: SavingsGoal, amount: number, date: ISODate, id: string): Contribution | undefined {
+  const diff = round(amount - g.contributions.reduce((n, c) => n + c.amount, 0))
+  return diff === 0 ? undefined : { id, date, amount: diff, note: 'Adjusted total' }
+}
