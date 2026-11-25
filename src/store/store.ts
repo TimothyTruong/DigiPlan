@@ -64,6 +64,8 @@ interface Actions {
   setCategories: (c: BudgetCategory[]) => void
   upsertTxn: (t: Txn) => void
   deleteTxn: (id: string) => void
+  addTxns: (t: Txn[]) => void
+  removeTxns: (ids: string[]) => void
   upsertAccount: (a: MoneyAccount) => void
   deleteAccount: (id: string) => void
   upsertGoal: (g: SavingsGoal) => void
@@ -274,6 +276,8 @@ export const useStore = create<State & Actions>()(
         setCategories: (c) => mut(() => ({ categories: c })),
         upsertTxn: (t) => mut((s) => ({ txns: upsert(s.txns, t) })),
         deleteTxn: (id) => mut((s) => ({ txns: s.txns.filter((t) => t.id !== id) })),
+        addTxns: (t) => mut((s) => ({ txns: [...s.txns, ...t] })),
+        removeTxns: (ids) => mut((s) => { const del = new Set(ids); return { txns: s.txns.filter((t) => !del.has(t.id)) } }),
         upsertAccount: (a) => mut((s) => ({ accounts: upsert(s.accounts, a) })),
         deleteAccount: (id) => mut((s) => ({
           accounts: s.accounts.filter((a) => a.id !== id),

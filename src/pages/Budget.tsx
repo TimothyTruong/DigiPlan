@@ -3,6 +3,7 @@ import { addMonths, format } from 'date-fns'
 import { PageShell } from '../components/PageShell'
 import { Empty, Modal, Seg, toast } from '../components/ui'
 import { SavingsView, useMoney } from './Savings'
+import { CsvImport } from './BudgetImport'
 import { fromISO, toISO, todayISO } from '../lib/dates'
 import { uid } from '../lib/id'
 import { useStore } from '../store/store'
@@ -31,6 +32,7 @@ function MonthBudget() {
   const cur = useStore((s) => s.settings.currency)
   const { upsertTxn, deleteTxn } = useStore.getState()
   const goals = useStore((s) => s.goals)
+  const [importing, setImporting] = useState(false)
   const [amount, setAmount] = useState('')
   const [note, setNote] = useState('')
   const [cat, setCat] = useState<string>(cats[0]?.id ?? '')
@@ -82,7 +84,7 @@ function MonthBudget() {
           </div>
         </section>
         <section className="card">
-          <div className="card-head"><h3>Log money</h3></div>
+          <div className="card-head"><h3>Log money</h3><button className="btn sm" onClick={() => setImporting(true)}>⬆ Import bank CSV</button></div>
           <div className="stack" style={{ gap: 8 }}>
             <div className="seg" style={{ alignSelf: 'flex-start' }}>
               <button className={!income ? 'on' : ''} onClick={() => setIncome(false)}>Expense</button>
@@ -100,6 +102,7 @@ function MonthBudget() {
           </div>
         </section>
       </div>
+      {importing && <CsvImport onClose={() => setImporting(false)} onDone={(latest) => { setImporting(false); if (latest) setMonth(latest) }} />}
     </>
   )
 }

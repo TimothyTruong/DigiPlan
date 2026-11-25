@@ -33,6 +33,11 @@
   per-record last-writer-wins via `push_records` RPC, mass-delete guard); `cloud.ts` = auth + triggers; supabase-js is lazy-loaded.
   Tests run the real migration on PGlite (`__tests__/rls.test.ts`, `engine.test.ts`). Setup steps: `supabase/README.md`.
   Never ship the service_role key. Sign-out wipes local data + sync meta (meta without data would push deletes).
+- `src/lib/bankcsv.ts`: bank CSV import (in-browser only). Columns are detected (header/no header, signed vs debit/credit,
+  M/D vs D/M, card exports with positive purchases), user can fix mapping in `pages/BudgetImport.tsx`. Txn.importKey de-dupes
+  re-imports (count-aware); own-account transfers/card payments unticked by default (Interac e-transfers kept);
+  categories guessed from merchant keywords + `settings.merchantRules` learned from the user's corrections.
+- `src/lib/money.ts` + `pages/Savings.tsx`: Budget → Savings & accounts (hand-updated balances, goals). Credit = owed.
 - `src/lib/ics.ts`: .ics timetable import → items (lectures→class, "exam/midterm"→exam with countdown).
 - Theming: each page/class has one accent hex; all tints derive via `color-mix` in CSS (`--accent-soft`, `--accent-ink`).
   Presets in `src/theme/themes.ts`. Covers: `preset:<key>` | blob id | `none`. Icons: emoji | `img:<blobId>`.

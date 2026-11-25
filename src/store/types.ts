@@ -112,7 +112,11 @@ export interface Wellness {
 }
 
 export interface BudgetCategory { id: string; name: string; emoji: string; planned: number }
-export interface Txn { id: string; date: ISODate; amount: number; categoryId?: string; note?: string; income?: boolean }
+export interface Txn {
+  id: string; date: ISODate; amount: number; categoryId?: string; note?: string; income?: boolean
+  /** Set for bank-CSV imports: date|amount|description, used to skip rows already imported. */
+  importKey?: string
+}
 
 export type AccountType = 'chequing' | 'savings' | 'credit' | 'investment' | 'cash'
 /** A bank/card balance the user updates by hand. Credit balances are what's owed (counted negative in net worth). */
@@ -161,4 +165,6 @@ export interface Settings {
   onboarded: boolean
   /** True while the planner still holds the built-in sample data (cleared by "Clear all" or a restore). */
   demo?: boolean
+  /** Merchant → category the user chose during CSV import (learned for next time). */
+  merchantRules?: Record<string, string>
 }
